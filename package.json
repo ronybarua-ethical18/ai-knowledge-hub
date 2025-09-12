@@ -1,0 +1,50 @@
+{
+  "name": "ai-powered-job-board",
+  "description": "A job board powered by AI, built with Next.js, shadcn/ui, and Tailwind CSS with TypeScript. Backend powered by NestJS.",
+  "author": "Rony Barua",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "prepare": "husky install",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "dev": "pnpm exec turbo run dev"
+  },
+  "lint-staged": {
+    "**/*.{js,ts,jsx,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "workspaces": [
+    "apps/web",
+    "apps/backend",
+    "packages/ui-design"
+  ],
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.2.2",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.3",
+    "typescript": "5.8.3"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@types/node": "^22.15.19",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "typescript-eslint": "^8.32.1"
+  }
+}
