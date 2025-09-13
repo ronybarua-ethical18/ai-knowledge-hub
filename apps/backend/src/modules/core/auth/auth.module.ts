@@ -8,6 +8,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { DatabaseModule } from '../../../database/database.module';
 import { env } from '../../../config/env.config';
+import { EmailModule } from '../../../services/email/email.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { env } from '../../../config/env.config';
       secret: env.config.JWT_SECRET,
       signOptions: { expiresIn: '15m' },
     }),
+    EmailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, UserService, JwtStrategy, LocalStrategy],

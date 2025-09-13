@@ -27,6 +27,8 @@ import {
 } from './dto/auth-response.dto';
 import { env } from '../../../config/env.config';
 import { ApiError } from '../../../common/exceptions/api-error.exception';
+import { EmailService } from '../../../services/email/email.service';
+import * as path from 'path';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +36,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly databaseService: DatabaseService,
+    private readonly emailService: EmailService,
   ) {}
 
   async validateUser(
@@ -129,13 +132,16 @@ export class AuthService {
     });
 
     // Create default workspace for new user
-    const defaultWorkspace = await this.createWorkspace(user.id, {
+    await this.createWorkspace(user.id, {
       name: `${user.fullName}'s Workspace`,
       description: 'My personal workspace',
     });
 
-    // TODO: Send email verification
-    // await this.emailService.sendVerificationEmail(user.email, verificationToken);
+    // Send welcome email
+    await this.emailService.sendWelcomeEmail({
+      email: user.email,
+      fullName: user.fullName,
+    });
 
     const tokens = await this.generateTokens(user);
     const workspaces = await this.getUserWorkspaces(user.id);
@@ -282,7 +288,7 @@ export class AuthService {
     userId: string,
     createWorkspaceDto: CreateWorkspaceDto,
   ): Promise<Workspace> {
-    const slug = this.generateSlug(createWorkspaceDto.name);
+    const slug = await this.generateUniqueSlug(createWorkspaceDto.name);
 
     return this.databaseService.workspace.create({
       data: {
@@ -517,10 +523,38 @@ export class AuthService {
     });
   }
 
-  private generateSlug(name: string): string {
-    return name
+  private async generateUniqueSlug(name: string): Promise<string> {
+    const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const existing = await this.databaseService.workspace.findUnique({
+        where: { slug },
+      });
+
+      if (!existing) break;
+
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    return slug;
+  }
+
+  private getTemplatePath(templateName: string): string {
+    // Use absolute path from project root
+    return path.join(
+      process.cwd(),
+      'src',
+      'services',
+      'email',
+      'templates',
+      `${templateName}.handlebars`,
+    );
   }
 }

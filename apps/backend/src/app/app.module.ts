@@ -6,6 +6,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { env } from '../config/env.config';
 import { CoreModule } from '../modules/core/core.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CoreModule } from '../modules/core/core.module';
       },
     ]),
     CoreModule,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

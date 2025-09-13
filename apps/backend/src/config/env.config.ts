@@ -8,6 +8,12 @@ interface Config {
   DATABASE_POOL_SIZE: number;
   DATABASE_POOL_TIMEOUT: number;
   DATABASE_CONNECT_TIMEOUT: number;
+  SMTP_HOST: string;
+  SMTP_PORT: number;
+  SMTP_USER: string;
+  SMTP_PASS: string;
+  SMTP_SECURE: boolean;
+  SMTP_FROM: string;
   PORT: number;
   JWT_SECRET: string;
   CORS_ORIGINS: string;
@@ -33,6 +39,12 @@ export const env = {
     DATABASE_CONNECT_TIMEOUT: Number(
       getEnvVar('DATABASE_CONNECT_TIMEOUT', '60000'),
     ),
+    SMTP_HOST: getEnvVar('SMTP_HOST'),
+    SMTP_PORT: Number(getEnvVar('SMTP_PORT', '587')),
+    SMTP_USER: getEnvVar('SMTP_USER'),
+    SMTP_PASS: getEnvVar('SMTP_PASS'),
+    SMTP_SECURE: getEnvVar('SMTP_SECURE', 'false') === 'true',
+    SMTP_FROM: getEnvVar('SMTP_FROM'),
     PORT: Number(getEnvVar('PORT', '8000')),
     JWT_SECRET: getEnvVar('JWT_SECRET'),
     CORS_ORIGINS: getEnvVar('CORS_ORIGINS', '*'),
