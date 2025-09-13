@@ -9,6 +9,7 @@ datasource db {
   provider = "postgresql" // Change to "mysql" or "sqlite" as needed
   url      = env("DATABASE_URL")
 }
+
 // Enums
 enum UserRole {
   ADMIN
@@ -29,115 +30,154 @@ enum WorkspaceRole {
   VIEWER
 }
 
+// prisma/schema.prisma
 model User {
-  id              String         @id @default(uuid())
-  email           String         @unique
-  password        String?        // Optional for OAuth users
-  fullName        String
-  role            UserRole       @default(USER)
-  provider        AuthProvider   @default(CREDENTIALS)
+  id       String       @id @default(uuid())
+  email    String       @unique
+  password String? // Optional for OAuth users
+  fullName String
+  role     UserRole     @default(USER)
+  provider AuthProvider @default(CREDENTIALS)
 
-  isEmailVerified Boolean        @default(false)
-  mfaEnabled      Boolean        @default(false)
-  isOnboarded     Boolean        @default(false)
+  isEmailVerified Boolean @default(false)
+  mfaEnabled      Boolean @default(false)
+  isOnboarded     Boolean @default(false)
 
   // Account lockout fields
-  isLocked        Boolean        @default(false)
-  lockoutExpiry   DateTime?
-  failedLoginAttempts Int?       @default(0)
+  isLocked            Boolean   @default(false)
+  lockoutExpiry       DateTime?
+  failedLoginAttempts Int?      @default(0)
 
   // AI Knowledge Hub specific fields
-  avatarUrl       String?
-  preferences     Json?          // User preferences for AI features
-  subscriptionTier String?       // FREE, PREMIUM, ENTERPRISE
+  avatarUrl        String?
+  preferences      Json? // User preferences for AI features
+  subscriptionTier String? // FREE, PREMIUM, ENTERPRISE
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   workspaces      WorkspaceMember[]
-  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
   documents       Document[]
   chatSessions    ChatSession[]
+  files           File[] // Add this line
 }
 
 model Workspace {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
-  slug        String   @unique
-  isPublic    Boolean  @default(false)
-  
+  slug        String  @unique
+  isPublic    Boolean @default(false)
+
   // AI Knowledge Hub specific fields
-  settings    Json?    // Workspace-specific AI settings
-  vectorDbId  String?  // Reference to vector database workspace
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  ownerId     String
-  owner       User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  
+  settings   Json? // Workspace-specific AI settings
+  vectorDbId String? // Reference to vector database workspace
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String
+  owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+
   // Relations
-  members     WorkspaceMember[]
-  documents   Document[]
+  members      WorkspaceMember[]
+  documents    Document[]
   chatSessions ChatSession[]
+  File         File[]
 }
 
 model WorkspaceMember {
-  id          String       @id @default(uuid())
+  id          String        @id @default(uuid())
   userId      String
   workspaceId String
   role        WorkspaceRole @default(MEMBER)
-  
-  createdAt   DateTime     @default(now())
-  
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
+
+  createdAt DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   @@unique([userId, workspaceId])
 }
 
 model Document {
-  id          String   @id @default(uuid())
-  title       String
-  fileName    String
-  fileType    String   // PDF, DOCX, TXT, etc.
-  fileSize    Int
-  fileUrl     String   // S3 or local storage URL
-  
+  id       String @id @default(uuid())
+  title    String
+  fileName String
+  fileType String // PDF, DOCX, TXT, etc.
+  fileSize Int
+  fileUrl  String // S3 or local storage URL
+
   // AI processing fields
-  content     String?  // Extracted text content
-  chunks      Json?    // Document chunks for vector search
-  embeddings  Json?    // Vector embeddings
-  summary     String?  // AI-generated summary
-  metadata    Json?    // Additional metadata
-  
+  content    String? // Extracted text content
+  chunks     Json? // Document chunks for vector search
+  embeddings Json? // Vector embeddings
+  summary    String? // AI-generated summary
+  metadata   Json? // Additional metadata
+
   // Processing status
-  isProcessed Boolean  @default(false)
-  processingStatus String @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  isProcessed      Boolean @default(false)
+  processingStatus String  @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   userId      String
   workspaceId String
-  
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model ChatSession {
-  id          String   @id @default(uuid())
-  title       String?
-  messages    Json     // Array of chat messages
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id       String  @id @default(uuid())
+  title    String?
+  messages Json // Array of chat messages
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   userId      String
   workspaceId String?
-  
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// prisma/schema.prisma
+model File {
+  id            String     @id @default(cuid())
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  fileType      FileType
+  status        FileStatus
+  filePath      String
+  extractedText String?
+  errorMessage  String?
+  processedAt   DateTime?
+  userId        String
+  workspaceId   String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("files")
+}
+
+enum FileType {
+  PDF
+  DOCX
+  TXT
+}
+
+enum FileStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
 }

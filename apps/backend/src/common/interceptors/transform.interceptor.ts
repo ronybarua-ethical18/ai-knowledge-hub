@@ -33,16 +33,21 @@ export class TransformInterceptor<T>
     const request = ctx.getRequest<Request>();
 
     return next.handle().pipe(
-      map((data: T) => ({
-        status: true,
-        message: 'Success',
-        data,
-        meta: {
-          timestamp: new Date().toISOString(),
-          path: request.url,
-          method: request.method,
-        },
-      })),
+      map((response: any) => {
+        const message = response?.message || 'Success';
+        const data = response?.data || response;
+
+        return {
+          status: true,
+          message,
+          data,
+          meta: {
+            timestamp: new Date().toISOString(),
+            path: request.url,
+            method: request.method,
+          },
+        };
+      }),
     );
   }
 }
