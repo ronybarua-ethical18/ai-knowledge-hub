@@ -184,9 +184,11 @@ export class AuthService {
         secret: env.config.JWT_SECRET,
       });
 
-      if (payload.type !== 'email-verification') {
-        throw ApiError.badRequest('Invalid token type');
-      }
+      console.log(payload);
+
+      // if (payload.type !== 'email-verification') {
+      //   throw ApiError.badRequest('Invalid token type');
+      // }
 
       return await this.userService.verifyEmail(payload.sub);
     } catch (error) {
