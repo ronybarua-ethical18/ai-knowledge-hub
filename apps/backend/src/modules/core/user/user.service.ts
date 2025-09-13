@@ -86,4 +86,66 @@ export class UserService {
   ): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
   }
+
+  // Account lockout methods
+  async lockAccount(userId: string, lockoutExpiry: Date): Promise<void> {
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: {
+        isLocked: true,
+        lockoutExpiry,
+      },
+    });
+  }
+
+  async unlockAccount(userId: string): Promise<void> {
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: {
+        isLocked: false,
+        lockoutExpiry: null,
+        failedLoginAttempts: 0,
+      },
+    });
+  }
+
+  async incrementFailedAttempts(
+    userId: string,
+    attempts: number,
+  ): Promise<void> {
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginAttempts: attempts,
+      },
+    });
+  }
+
+  async resetFailedAttempts(userId: string): Promise<void> {
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginAttempts: 0,
+      },
+    });
+  }
+
+  async findUserForLockoutCheck(email: string): Promise<{
+    id: string;
+    isLocked: boolean;
+    lockoutExpiry: Date | null;
+    failedLoginAttempts: number | null;
+  } | null> {
+    const user = await this.databaseService.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        isLocked: true,
+        lockoutExpiry: true,
+        failedLoginAttempts: true,
+      },
+    });
+
+    return user;
+  }
 }

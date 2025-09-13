@@ -21,7 +21,7 @@ export class DatabaseService
     super({
       datasources: {
         db: {
-          url: env.config.DATABASE_URL,
+          url: `${env.config.DATABASE_URL}?connection_limit=${env.config.DATABASE_POOL_SIZE}&pool_timeout=${env.config.DATABASE_POOL_TIMEOUT}&connect_timeout=${env.config.DATABASE_CONNECT_TIMEOUT}`,
         },
       },
       log:

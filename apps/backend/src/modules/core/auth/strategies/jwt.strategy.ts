@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { env } from '../../../../config/env.config';
 import { UserService } from '../../user/user.service';
+import { ApiError } from '../../../../common/exceptions/api-error.exception';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,11 +19,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const user = await this.userService.findById(payload.sub);
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     if (!user.isEmailVerified) {
-      throw new UnauthorizedException('Email not verified');
+      throw ApiError.unauthorized('Email not verified');
     }
 
     return user;

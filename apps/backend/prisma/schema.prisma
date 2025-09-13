@@ -41,6 +41,11 @@ model User {
   mfaEnabled      Boolean        @default(false)
   isOnboarded     Boolean        @default(false)
 
+  // Account lockout fields
+  isLocked        Boolean        @default(false)
+  lockoutExpiry   DateTime?
+  failedLoginAttempts Int?       @default(0)
+
   // AI Knowledge Hub specific fields
   avatarUrl       String?
   preferences     Json?          // User preferences for AI features

@@ -26,10 +26,10 @@ export class TransformInterceptor<T>
   implements NestInterceptor<T, Response<T>>
 {
   intercept(
-    context: ExecutionContext,
+    context: ExecutionContext, //Contains request/response info
     next: CallHandler,
   ): Observable<Response<T>> {
-    const ctx = context.switchToHttp();
+    const ctx = context.switchToHttp(); //NestJS supports multiple application types (HTTP, WebSockets, GraphQL, etc.)
     const request = ctx.getRequest<Request>();
 
     return next.handle().pipe(

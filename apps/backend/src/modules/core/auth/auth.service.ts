@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { DatabaseService } from '../../../database/database.service';
@@ -12,8 +6,8 @@ import {
   User,
   AuthProvider,
   Workspace,
-  WorkspaceMember,
   WorkspaceRole,
+  UserRole,
 } from '@prisma/client';
 import {
   LoginDto,
@@ -28,10 +22,11 @@ import {
   AuthResponseDto,
   TokenResponseDto,
   WorkspaceResponseDto,
-  WorkspaceListResponseDto,
   WorkspaceMemberResponseDto,
+  UserResponseDto,
 } from './dto/auth-response.dto';
 import { env } from '../../../config/env.config';
+import { ApiError } from '../../../common/exceptions/api-error.exception';
 
 @Injectable()
 export class AuthService {
@@ -41,11 +36,34 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<User> {
-    const user = await this.userService.findByEmail(email);
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    fullName: string;
+    role: UserRole;
+    avatarUrl: string | null;
+    isOnboarded: boolean;
+    isEmailVerified: boolean;
+  }> {
+    const user = await this.databaseService.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        avatarUrl: true,
+        isOnboarded: true,
+        isEmailVerified: true,
+        password: true,
+      },
+    });
 
     if (!user || !user.password) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw ApiError.unauthorized('Invalid credentials');
     }
 
     const isPasswordValid = await this.userService.comparePassword(
@@ -54,24 +72,47 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw ApiError.unauthorized('Invalid credentials');
     }
 
-    return user;
+    // Return the exact type we need
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      isOnboarded: user.isOnboarded,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.validateUser(loginDto.email, loginDto.password);
 
     if (!user.isEmailVerified) {
-      throw new UnauthorizedException('Email not verified');
+      throw ApiError.unauthorized('Email not verified');
     }
 
-    const tokens = await this.generateTokens(user);
+    if (!user.id || !user.email || !user.role) {
+      throw ApiError.unauthorized('Invalid user data');
+    }
+
+    const tokens = await this.generateTokens(
+      user as { id: string; email: string; role: UserRole },
+    );
     const workspaces = await this.getUserWorkspaces(user.id);
 
+    const userResponse: UserResponseDto = {
+      email: user.email!,
+      fullName: user.fullName!,
+      role: user.role!,
+      avatarUrl: user.avatarUrl,
+      isOnboarded: user.isOnboarded!,
+    };
+
     return {
-      user,
+      user: userResponse,
       ...tokens,
       workspaces,
     };
@@ -117,12 +158,12 @@ export class AuthService {
       const user = await this.userService.findById(payload.sub);
 
       if (!user) {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw ApiError.unauthorized('Invalid refresh token');
       }
 
       return await this.generateTokens(user);
     } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw ApiError.unauthorized('Invalid refresh token');
     }
   }
 
@@ -138,12 +179,12 @@ export class AuthService {
       });
 
       if (payload.type !== 'email-verification') {
-        throw new BadRequestException('Invalid token type');
+        throw ApiError.badRequest('Invalid token type');
       }
 
       return await this.userService.verifyEmail(payload.sub);
     } catch (error) {
-      throw new BadRequestException('Invalid verification token');
+      throw ApiError.badRequest('Invalid verification token');
     }
   }
 
@@ -171,12 +212,12 @@ export class AuthService {
       });
 
       if (payload.type !== 'password-reset') {
-        throw new BadRequestException('Invalid token type');
+        throw ApiError.badRequest('Invalid token type');
       }
 
       await this.userService.updatePassword(payload.sub, newPassword);
     } catch (error) {
-      throw new BadRequestException('Invalid reset token');
+      throw ApiError.badRequest('Invalid reset token');
     }
   }
 
@@ -196,7 +237,7 @@ export class AuthService {
       });
     } else if (user.provider !== provider) {
       // User exists but with different provider
-      throw new BadRequestException(
+      throw ApiError.badRequest(
         `Account already exists with ${user.provider} provider`,
       );
     }
@@ -209,7 +250,11 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(user: User): Promise<TokenResponseDto> {
+  private async generateTokens(user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  }): Promise<TokenResponseDto> {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -288,7 +333,7 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new NotFoundException('Workspace not found or access denied');
+      throw ApiError.notFound('Workspace not found or access denied');
     }
 
     return membership.workspace;
@@ -308,9 +353,7 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new ForbiddenException(
-        'Only workspace owners can update workspace',
-      );
+      throw ApiError.forbidden('Only workspace owners can update workspace');
     }
 
     return this.databaseService.workspace.update({
@@ -333,9 +376,7 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new ForbiddenException(
-        'Only workspace owners can delete workspace',
-      );
+      throw ApiError.forbidden('Only workspace owners can delete workspace');
     }
 
     await this.databaseService.workspace.delete({
@@ -357,12 +398,12 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new ForbiddenException('Only workspace owners can invite members');
+      throw ApiError.forbidden('Only workspace owners can invite members');
     }
 
     const invitedUser = await this.userService.findByEmail(inviteDto.email);
     if (!invitedUser) {
-      throw new NotFoundException('User not found');
+      throw ApiError.notFound('User not found');
     }
 
     // Check if user is already a member
@@ -375,9 +416,7 @@ export class AuthService {
       });
 
     if (existingMembership) {
-      throw new BadRequestException(
-        'User is already a member of this workspace',
-      );
+      throw ApiError.badRequest('User is already a member of this workspace');
     }
 
     await this.databaseService.workspaceMember.create({
@@ -403,7 +442,7 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new ForbiddenException('Access denied to workspace');
+      throw ApiError.forbidden('Access denied to workspace');
     }
 
     const members = await this.databaseService.workspaceMember.findMany({
@@ -445,9 +484,7 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new ForbiddenException(
-        'Only workspace owners can update member roles',
-      );
+      throw ApiError.forbidden('Only workspace owners can update member roles');
     }
 
     await this.databaseService.workspaceMember.update({
@@ -472,7 +509,7 @@ export class AuthService {
     });
 
     if (!membership) {
-      throw new ForbiddenException('Only workspace owners can remove members');
+      throw ApiError.forbidden('Only workspace owners can remove members');
     }
 
     await this.databaseService.workspaceMember.delete({

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { User, Workspace, WorkspaceMember } from '@prisma/client';
+import { User } from '@prisma/client';
 
 export class WorkspaceResponseDto {
   @ApiProperty()
@@ -27,9 +27,26 @@ export class WorkspaceResponseDto {
   updatedAt: Date;
 }
 
-export class AuthResponseDto {
+export class UserResponseDto {
   @ApiProperty()
-  user: User;
+  email: string;
+
+  @ApiProperty()
+  fullName: string;
+
+  @ApiProperty()
+  role: string;
+
+  @ApiProperty()
+  avatarUrl?: string;
+
+  @ApiProperty()
+  isOnboarded: boolean;
+}
+
+export class AuthResponseDto {
+  @ApiProperty({ type: UserResponseDto })
+  user: UserResponseDto;
 
   @ApiProperty()
   accessToken: string;

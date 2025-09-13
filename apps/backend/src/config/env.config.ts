@@ -5,6 +5,9 @@ import { config } from 'dotenv';
 
 interface Config {
   DATABASE_URL: string;
+  DATABASE_POOL_SIZE: number;
+  DATABASE_POOL_TIMEOUT: number;
+  DATABASE_CONNECT_TIMEOUT: number;
   PORT: number;
   JWT_SECRET: string;
   CORS_ORIGINS: string;
@@ -25,6 +28,11 @@ function getEnvVar(key: string, defaultValue?: string): string {
 export const env = {
   config: {
     DATABASE_URL: getEnvVar('DATABASE_URL'),
+    DATABASE_POOL_SIZE: Number(getEnvVar('DATABASE_POOL_SIZE', '10')),
+    DATABASE_POOL_TIMEOUT: Number(getEnvVar('DATABASE_POOL_TIMEOUT', '10000')),
+    DATABASE_CONNECT_TIMEOUT: Number(
+      getEnvVar('DATABASE_CONNECT_TIMEOUT', '60000'),
+    ),
     PORT: Number(getEnvVar('PORT', '8000')),
     JWT_SECRET: getEnvVar('JWT_SECRET'),
     CORS_ORIGINS: getEnvVar('CORS_ORIGINS', '*'),
