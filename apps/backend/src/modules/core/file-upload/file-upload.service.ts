@@ -5,6 +5,7 @@ import * as fs from 'fs/promises';
 import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { ApiError } from '../../../common/exceptions/api-error.exception';
+import { QueueService } from '../../../services/queue/queue.service';
 
 @Injectable()
 export class FileUploadService {
@@ -16,7 +17,10 @@ export class FileUploadService {
     'text/plain': 'TXT',
   };
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly queueService: QueueService,
+  ) {}
 
   async uploadFile(
     file: Express.Multer.File,
@@ -53,8 +57,16 @@ export class FileUploadService {
         },
       });
 
-      // Process file asynchronously
-      this.processFile(fileRecord.id, file.path, file.mimetype);
+      // Add file to queue
+      const fileQueue = this.queueService.createQueue('file-ready');
+      await fileQueue.add(
+        'process-file',
+        JSON.stringify({
+          filename: file.originalname,
+          destination: file.destination,
+          path: file.path,
+        }),
+      );
 
       return {
         id: fileRecord.id,

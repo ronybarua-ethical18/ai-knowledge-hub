@@ -34,17 +34,17 @@ export class FileUploadController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
-    @Query('workspaceId') workspaceId: string,
+    @Query('workspaceId') workspaceId?: string, // Make optional with ?
   ) {
     if (!file) {
       throw new Error('No file uploaded');
     }
 
-    if (!workspaceId) {
-      throw new Error('Workspace ID is required');
-    }
-
-    return this.fileUploadService.uploadFile(file, req.user.id, workspaceId);
+    return this.fileUploadService.uploadFile(
+      file,
+      req.user.id,
+      workspaceId || 'default',
+    );
   }
 
   @Get()

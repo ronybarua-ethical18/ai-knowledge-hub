@@ -21,6 +21,8 @@ interface Config {
   THROTTLE_LIMIT: number;
   GLOBAL_PREFIX: string;
   NODE_ENV: string;
+  REDIS_HOST: string;
+  REDIS_PORT: number;
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -52,5 +54,7 @@ export const env = {
     THROTTLE_LIMIT: Number(getEnvVar('THROTTLE_LIMIT', '100')),
     GLOBAL_PREFIX: getEnvVar('GLOBAL_PREFIX', 'api/v1/'),
     NODE_ENV: getEnvVar('NODE_ENV', 'development'),
+    REDIS_HOST: getEnvVar('REDIS_HOST', 'localhost'),
+    REDIS_PORT: Number(getEnvVar('REDIS_PORT', '6379')),
   } satisfies Config,
 };

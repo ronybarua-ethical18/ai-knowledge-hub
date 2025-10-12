@@ -1,7 +1,10 @@
 "use client";
+import ChatUI from "../components/chat";
 
-import LandingPage from "@/components/landing-page";
-
-export default function page() {
-  return <LandingPage />;
+export default function Page() {
+  return (
+    <>
+      <ChatUI />
+    </>
+  );
 }

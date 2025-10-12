@@ -1,11 +1,8 @@
 import axios from "axios";
 
 export const apiClient = axios.create({
-  baseURL: "https://jsonplaceholder.typicode.com",
-  withCredentials: true, // for cookie-based auth
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: "http://localhost:8000/api/v1",
+  withCredentials: true,
 });
 
 // Request interceptor (e.g., attach token from localStorage or cookie)
