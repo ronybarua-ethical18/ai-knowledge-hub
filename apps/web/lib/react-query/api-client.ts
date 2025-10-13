@@ -1,14 +1,15 @@
 import axios from "axios";
+import { cookieUtils } from "@/lib/utils/cookies";
 
 export const apiClient = axios.create({
   baseURL: "http://localhost:8000/api/v1",
   withCredentials: true,
 });
 
-// Request interceptor (e.g., attach token from localStorage or cookie)
+// Request interceptor - optimized token extraction
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token"); // or from cookie
+    const token = cookieUtils.get("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -20,9 +21,12 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
-    // You can handle auth errors globally here
     if (err.response?.status === 401) {
-      console.warn("Unauthorized, redirect to login maybe");
+      // Clear tokens and redirect to login
+      if (typeof window !== "undefined") {
+        cookieUtils.clear();
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(err);
   },

@@ -6,7 +6,8 @@ import { Input } from "@workspace/ui/components/input";
 import { Upload, Send, FileText, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useFileUpload } from "../hooks/useFileUpload";
-import { useUser } from "@clerk/nextjs";
+import TopBar from "./TopBar";
+import { useAuthContext } from "../contexts/AuthContext";
 
 interface Message {
   id: string;
@@ -16,6 +17,7 @@ interface Message {
 
 export default function ChatUI() {
   const { mutate: uploadFile, isPending: isUploading } = useFileUpload();
+  const { currentWorkspace } = useAuthContext(); // Get current workspace
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -23,11 +25,6 @@ export default function ChatUI() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (file: File) => {
-    // if (!user?.id) {
-    //   toast.error('Please sign in to upload files');
-    //   return;
-    // }
-
     // Validate file type
     const allowedTypes = [
       "application/pdf",
@@ -45,40 +42,44 @@ export default function ChatUI() {
       return;
     }
 
+    // Get the first workspace ID from user's workspaces
+    // For now, we'll need to get this from the auth response
+    // You might need to store workspaces in localStorage or context
+    const workspaceId =
+      currentWorkspace?.id || "f4f5c567-a78f-40eb-941a-bfa7d243ebce"; // Use the actual workspace ID from login response
+
     uploadFile(
-      { file, userId: "" },
+      { file, workspaceId },
       {
         onSuccess: (data) => {
-          toast.success("File uploaded! Processing in background...");
-
-          const welcomeMessage: Message = {
-            id: Date.now().toString(),
-            content: `I've uploaded "${file.name}". Processing... You'll be able to ask questions once it's ready!`,
-            role: "assistant",
-          };
-          setMessages([welcomeMessage]);
+          toast.success("File uploaded successfully!");
+          setUploadedFile(file);
+        },
+        onError: (error) => {
+          toast.error("Failed to upload file");
+          console.error("Upload error:", error);
         },
       },
     );
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0 && files[0]) {
-      handleFileUpload(files[0]);
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !uploadedFile) return;
+    if (!inputMessage.trim() && !uploadedFile) return;
 
-    const userMessage: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
       content: inputMessage,
       role: "user",
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInputMessage("");
     setIsLoading(true);
 
@@ -86,7 +87,7 @@ export default function ChatUI() {
     setTimeout(() => {
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: `Based on your PDF, here's what I found: "${inputMessage}". This is a simulated response.`,
+        content: "I received your message. This is a simulated response.",
         role: "assistant",
       };
       setMessages((prev) => [...prev, aiResponse]);
@@ -94,117 +95,161 @@ export default function ChatUI() {
     }, 1000);
   };
 
-  const removeFile = () => {
+  const removeUploadedFile = () => {
     setUploadedFile(null);
-    setMessages([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem-2rem)] bg-background">
-      {/* Left Side - Upload */}
-      <div className="w-1/2 p-6 flex items-center justify-center">
-        <div className="w-full max-w-md">
-          {uploadedFile ? (
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mx-auto">
-                <FileText className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">{uploadedFile.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={removeFile}>
-                <X className="w-4 h-4 mr-2" />
-                Remove File
-              </Button>
-            </div>
-          ) : (
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center w-16 h-16 bg-muted rounded-full mx-auto">
-                <Upload className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-lg font-medium">Upload PDF</p>
-                <p className="text-sm text-muted-foreground">
-                  Drag and drop or click to browse
-                </p>
-              </div>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? "Uploading..." : "Choose File"}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileInputChange}
-                className="hidden"
-              />
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Top Bar */}
+      <TopBar />
 
-      {/* Right Side - Chat */}
-      <div className="w-1/2 border-l border-border flex flex-col h-full">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                }`}
-              >
-                <p className="text-sm">{message.content}</p>
-              </div>
-            </div>
-          ))}
+      {/* Main Content - Sidebar Layout */}
+      <div className="flex-1 flex">
+        {/* Left Sidebar - Upload Section */}
+        <div className="w-80 bg-white border-r border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Upload Documents
+          </h3>
 
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg p-3">
-                <p className="text-sm text-muted-foreground">Thinking...</p>
-              </div>
-            </div>
-          )}
-        </div>
+          {/* Upload Area */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-sm text-gray-600 mb-2">
+              Upload PDF, DOCX, or TXT files
+            </p>
+            <p className="text-xs text-gray-500 mb-4">
+              Maximum file size: 10MB
+            </p>
 
-        {/* Input */}
-        <div className="p-4 border-t border-border">
-          <div className="flex space-x-2">
-            <Input
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={
-                uploadedFile
-                  ? "Ask a question about your PDF..."
-                  : "Upload a PDF first"
-              }
-              disabled={!uploadedFile || isLoading}
-              className="flex-1"
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  handleSendMessage();
-                }
-              }}
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileInputChange}
+              accept=".pdf,.docx,.txt"
+              className="hidden"
             />
+
             <Button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || !uploadedFile || isLoading}
-              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-full"
             >
-              <Send className="w-4 h-4" />
+              {isUploading ? "Uploading..." : "Choose File"}
             </Button>
+          </div>
+
+          {/* Uploaded File Display */}
+          {uploadedFile && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">
+                      {uploadedFile.name}
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={removeUploadedFile}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* File List (if you want to show multiple files) */}
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">
+              Recent Files
+            </h4>
+            <div className="space-y-2">
+              {/* You can add a list of recent files here */}
+              <p className="text-xs text-gray-500">No recent files</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.length === 0 ? (
+              <div className="text-center py-12">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Welcome to AI Knowledge Hub
+                </h2>
+                <p className="text-gray-600">
+                  Start a conversation or upload a document to get started.
+                </p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      message.role === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-900 border"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+              ))
+            )}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white text-gray-900 border px-4 py-2 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span>AI is thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input Area */}
+          <div className="border-t border-gray-200 p-6">
+            <div className="flex space-x-4">
+              <div className="flex-1 relative">
+                <Input
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="pr-12"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+              </div>
+
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() && !uploadedFile}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
