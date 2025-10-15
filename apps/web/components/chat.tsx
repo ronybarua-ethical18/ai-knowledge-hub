@@ -3,9 +3,10 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
-import { Upload, Send, FileText, X } from "lucide-react";
+import { Upload, Send, FileText, X, Bot, User } from "lucide-react";
 import toast from "react-hot-toast";
 import { useFileUpload } from "../hooks/useFileUpload";
+import { useAiChat } from "../features/ai/hooks/useAIChat";
 import TopBar from "./TopBar";
 import { useAuthContext } from "../contexts/AuthContext";
 
@@ -13,19 +14,22 @@ interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
+  references?: Array<{
+    content: string;
+    source?: string;
+  }>;
 }
 
 export default function ChatUI() {
   const { mutate: uploadFile, isPending: isUploading } = useFileUpload();
-  const { currentWorkspace } = useAuthContext(); // Get current workspace
+  const { mutate: chatWithAI, isPending: isChatting } = useAiChat();
+  const { currentWorkspace } = useAuthContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (file: File) => {
-    // Validate file type
     const allowedTypes = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -36,17 +40,12 @@ export default function ChatUI() {
       return;
     }
 
-    // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       toast.error("File size exceeds 10MB limit");
       return;
     }
 
-    // Get the first workspace ID from user's workspaces
-    // For now, we'll need to get this from the auth response
-    // You might need to store workspaces in localStorage or context
-    const workspaceId =
-      currentWorkspace?.id || "f4f5c567-a78f-40eb-941a-bfa7d243ebce"; // Use the actual workspace ID from login response
+    const workspaceId = currentWorkspace?.id || "f4f5c567-a78f-40eb-941a-bfa7d243ebce";
 
     uploadFile(
       { file, workspaceId },
@@ -71,28 +70,41 @@ export default function ChatUI() {
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() && !uploadedFile) return;
+    if (!inputMessage.trim()) return;
 
-    const newMessage: Message = {
+    const userMessage: Message = {
       id: Date.now().toString(),
       content: inputMessage,
       role: "user",
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, userMessage]);
+    const currentMessage = inputMessage;
     setInputMessage("");
-    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I received your message. This is a simulated response.",
-        role: "assistant",
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1000);
+    // Call AI chat API
+    chatWithAI(
+      { message: currentMessage, limit: 5 },
+      {
+        onSuccess: (data) => {
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: data.response,
+            role: "assistant",
+            references: data.references,
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+        },
+        onError: (error) => {
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: "Sorry, I couldn't process your request. Please try again.",
+            role: "assistant",
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+        },
+      },
+    );
   };
 
   const removeUploadedFile = () => {
@@ -167,13 +179,12 @@ export default function ChatUI() {
             </div>
           )}
 
-          {/* File List (if you want to show multiple files) */}
+          {/* File List */}
           <div className="mt-6">
             <h4 className="text-sm font-medium text-gray-900 mb-3">
               Recent Files
             </h4>
             <div className="space-y-2">
-              {/* You can add a list of recent files here */}
               <p className="text-xs text-gray-500">No recent files</p>
             </div>
           </div>
@@ -201,24 +212,65 @@ export default function ChatUI() {
                   }`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    className={`max-w-2xl px-4 py-3 rounded-lg ${
                       message.role === "user"
                         ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-900 border"
+                        : "bg-white text-gray-900 border shadow-sm"
                     }`}
                   >
-                    {message.content}
+                    <div className="flex items-start space-x-2">
+                      {message.role === "assistant" && (
+                        <Bot className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      )}
+                      {message.role === "user" && (
+                        <User className="h-5 w-5 text-white mt-0.5 flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className="text-sm">{message.content}</p>
+                        
+                        {/* Show AI references if available */}
+                        {message.role === "assistant" && message.references && message.references.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs text-gray-500 font-medium">
+                              References:
+                            </p>
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                              {message.references.map((reference, index) => (
+                                <div
+                                  key={index}
+                                  className="p-3 bg-gray-50 rounded border text-xs"
+                                >
+                                  <p className="text-gray-700 mb-1">
+                                    {reference.content.length > 150
+                                      ? `${reference.content.substring(0, 150)}...`
+                                      : reference.content}
+                                  </p>
+                                  {reference.source && (
+                                    <p className="text-blue-600 font-medium">
+                                      Source: {reference.source}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))
             )}
 
-            {isLoading && (
+            {isChatting && (
               <div className="flex justify-start">
-                <div className="bg-white text-gray-900 border px-4 py-2 rounded-lg">
+                <div className="bg-white text-gray-900 border px-4 py-3 rounded-lg shadow-sm">
                   <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span>AI is thinking...</span>
+                    <Bot className="h-5 w-5 text-blue-600" />
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="text-sm">AI is searching documents...</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -232,7 +284,7 @@ export default function ChatUI() {
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder="Ask questions about your uploaded documents..."
                   className="pr-12"
                   onKeyPress={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -245,7 +297,7 @@ export default function ChatUI() {
 
               <Button
                 onClick={handleSendMessage}
-                disabled={!inputMessage.trim() && !uploadedFile}
+                disabled={!inputMessage.trim() || isChatting}
               >
                 <Send className="h-4 w-4" />
               </Button>

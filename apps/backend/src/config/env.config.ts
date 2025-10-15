@@ -25,6 +25,7 @@ interface Config {
   REDIS_PORT: number;
   QDRANT_URL: string;
   GEMINI_API_KEY: string;
+  GEMINI_CHAT_MODEL: string;
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -60,5 +61,6 @@ export const env = {
     REDIS_PORT: Number(getEnvVar('REDIS_PORT', '6379')),
     QDRANT_URL: getEnvVar('QDRANT_URL', 'http://localhost:6333'),
     GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY'),
+    GEMINI_CHAT_MODEL: getEnvVar('GEMINI_CHAT_MODEL', 'gemini-pro'),
   } satisfies Config,
 };

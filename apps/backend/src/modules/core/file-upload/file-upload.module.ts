@@ -7,6 +7,7 @@ import { FileUploadService } from './file-upload.service';
 import { QueueModule } from '../../../services/queue/queue.module';
 import { FileProcessorWorker } from '../../../services/queue/workers/file-processor.worker';
 import { QueueService } from '../../../services/queue/queue.service';
+import { AiModule } from 'src/services/ai/ai.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { QueueService } from '../../../services/queue/queue.service';
       },
     }),
     QueueModule,
+    AiModule
   ],
   controllers: [FileUploadController],
   providers: [FileUploadService, FileProcessorWorker],

@@ -4,23 +4,21 @@ import { QdrantVectorStore } from '@langchain/qdrant';
 import { Document } from '@langchain/core/documents';
 import type { AttributeInfo } from 'langchain/chains/query_constructor';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
-import { CharacterTextSplitter } from '@langchain/textsplitters';
-import { QdrantClient } from '@qdrant/js-client-rest';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { TaskType } from '@google/generative-ai';
 
 import { Job } from 'bullmq';
-import { FileStatus } from '@prisma/client';
 import * as fs from 'fs/promises';
 import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { DatabaseService } from '../../../database/database.service';
+import { AiService } from 'src/services/ai/ai.service';
 
 @Injectable()
 export class FileProcessorWorker {
   private readonly logger = new Logger(FileProcessorWorker.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService, private readonly aiService: AiService) {}
 
   async processFileJob(job: Job): Promise<void> {
     this.logger.log(`Processing file job: ${job.id}`);
@@ -40,21 +38,7 @@ export class FileProcessorWorker {
       const loader = new PDFLoader(fileData.path);
       const docs = await loader.load();
 
-      const embeddings = new GoogleGenerativeAIEmbeddings({
-        model: 'text-embedding-004', // 768 dimensions
-        taskType: TaskType.RETRIEVAL_DOCUMENT,
-        title: 'Document title',
-        apiKey: process.env.GEMINI_API_KEY,
-      });
-
-      const vectorStore = await QdrantVectorStore.fromExistingCollection(
-        embeddings,
-        {
-          url: process.env.QDRANT_URL,
-          collectionName: 'file-collection',
-        },
-      );
-      await vectorStore.addDocuments(docs);
+    await this.aiService.addDocumentsToVectorStore(docs);
       console.log('Documents added to vector store');
 
       // const textSplitter = new CharacterTextSplitter({
