@@ -23,6 +23,8 @@ interface Config {
   NODE_ENV: string;
   REDIS_HOST: string;
   REDIS_PORT: number;
+  QDRANT_URL: string;
+  GEMINI_API_KEY: string;
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -56,5 +58,7 @@ export const env = {
     NODE_ENV: getEnvVar('NODE_ENV', 'development'),
     REDIS_HOST: getEnvVar('REDIS_HOST', 'localhost'),
     REDIS_PORT: Number(getEnvVar('REDIS_PORT', '6379')),
+    QDRANT_URL: getEnvVar('QDRANT_URL', 'http://localhost:6333'),
+    GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY'),
   } satisfies Config,
 };

@@ -1,4 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { QdrantVectorStore } from '@langchain/qdrant';
+import { Document } from '@langchain/core/documents';
+import type { AttributeInfo } from 'langchain/chains/query_constructor';
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+import { CharacterTextSplitter } from '@langchain/textsplitters';
+import { QdrantClient } from '@qdrant/js-client-rest';
+import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import { TaskType } from '@google/generative-ai';
+
 import { Job } from 'bullmq';
 import { FileStatus } from '@prisma/client';
 import * as fs from 'fs/promises';
@@ -17,54 +27,91 @@ export class FileProcessorWorker {
 
     try {
       const fileData = JSON.parse(job.data);
-      const { filename, destination, path } = fileData;
 
-      this.logger.log(`Processing file: ${filename} at ${path}`);
+      /*
+      Path: data.path
+      read the pdf from path,
+      chunk the pdf,
+      call teh openai embedding model for every chunk,
+      store the chunk in qdrant db
+      */
 
-      // Find the file record in database
-      const fileRecord = await this.databaseService.file.findFirst({
-        where: { filePath: path },
+      //Load the pdf from path
+      const loader = new PDFLoader(fileData.path);
+      const docs = await loader.load();
+
+      const embeddings = new GoogleGenerativeAIEmbeddings({
+        model: 'text-embedding-004', // 768 dimensions
+        taskType: TaskType.RETRIEVAL_DOCUMENT,
+        title: 'Document title',
+        apiKey: process.env.GEMINI_API_KEY,
       });
 
-      if (!fileRecord) {
-        throw new Error(`File record not found for path: ${path}`);
-      }
-
-      // Update status to processing
-      await this.databaseService.file.update({
-        where: { id: fileRecord.id },
-        data: { status: FileStatus.PROCESSING },
-      });
-
-      // Extract text based on file type
-      let extractedText: string;
-      const mimeType = fileRecord.mimeType;
-
-      switch (mimeType) {
-        case 'application/pdf':
-          extractedText = await this.extractTextFromPDF(path);
-          break;
-        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-          extractedText = await this.extractTextFromDOCX(path);
-          break;
-        case 'text/plain':
-          extractedText = await this.extractTextFromTXT(path);
-          break;
-        default:
-          throw new Error('Unsupported file type');
-      }
-
-      // Update file with extracted text
-      await this.databaseService.file.update({
-        where: { id: fileRecord.id },
-        data: {
-          extractedText,
-          status: FileStatus.PROCESSED,
-          processedAt: new Date(),
+      const vectorStore = await QdrantVectorStore.fromExistingCollection(
+        embeddings,
+        {
+          url: process.env.QDRANT_URL,
+          collectionName: 'file-collection',
         },
-      });
+      );
+      await vectorStore.addDocuments(docs);
+      console.log('Documents added to vector store');
 
-      this.logger.log(`File processed successfully: ${filename}`);
+      // const textSplitter = new CharacterTextSplitter({
+      //   chunkSize: 100,
+      //   chunkOverlap: 0,
+      // });
+      // const texts = await textSplitter.splitText(docs);
+      // console.log(texts);
+
+      // const { filename, destination, path } = fileData;
+
+      // this.logger.log(`Processing file: ${filename} at ${path}`);
+
+      // // Find the file record in database
+      // const fileRecord = await this.databaseService.file.findFirst({
+      //   where: { filePath: path },
+      // });
+
+      // if (!fileRecord) {
+      //   throw new Error(`File record not found for path: ${path}`);
+      // }
+
+      // // Update status to processing
+      // await this.databaseService.file.update({
+      //   where: { id: fileRecord.id },
+      //   data: { status: FileStatus.PROCESSING },
+      // });
+
+      // // Extract text based on file type
+      // let extractedText: string;
+      // const mimeType = fileRecord.mimeType;
+
+      // switch (mimeType) {
+      //   case 'application/pdf':
+      //     extractedText = await this.extractTextFromPDF(path);
+      //     break;
+      //   case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      //     extractedText = await this.extractTextFromDOCX(path);
+      //     break;
+      //   case 'text/plain':
+      //     extractedText = await this.extractTextFromTXT(path);
+      //     break;
+      //   default:
+      //     throw new Error('Unsupported file type');
+      // }
+
+      // // Update file with extracted text
+      // await this.databaseService.file.update({
+      //   where: { id: fileRecord.id },
+      //   data: {
+      //     extractedText,
+      //     status: FileStatus.PROCESSED,
+      //     processedAt: new Date(),
+      //   },
+      // });
+
+      // this.logger.log(`File processed successfully: ${filename}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
