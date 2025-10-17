@@ -20,7 +20,7 @@ import { AiModule } from 'src/services/ai/ai.module';
       },
     }),
     QueueModule,
-    AiModule
+    AiModule,
   ],
   controllers: [FileUploadController],
   providers: [FileUploadService, FileProcessorWorker],

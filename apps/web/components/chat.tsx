@@ -20,6 +20,36 @@ interface Message {
   }>;
 }
 
+// Helper function to determine if references should be shown
+const shouldShowReferences = (
+  aiResponse: string,
+  allMessages: Message[],
+): boolean => {
+  // Check if the user's last message contains keywords asking for references
+  const lastUserMessage =
+    allMessages
+      .filter((msg) => msg.role === "user")
+      .pop()
+      ?.content.toLowerCase() || "";
+
+  const referenceKeywords = [
+    "reference",
+    "references",
+    "source",
+    "sources",
+    "show me the document",
+    "where did you get this",
+    "which document",
+    "from which file",
+    "show sources",
+    "cite",
+    "citation",
+    "where is this from",
+  ];
+
+  return referenceKeywords.some((keyword) => lastUserMessage.includes(keyword));
+};
+
 export default function ChatUI() {
   const { mutate: uploadFile, isPending: isUploading } = useFileUpload();
   const { mutate: chatWithAI, isPending: isChatting } = useAiChat();
@@ -45,7 +75,8 @@ export default function ChatUI() {
       return;
     }
 
-    const workspaceId = currentWorkspace?.id || "f4f5c567-a78f-40eb-941a-bfa7d243ebce";
+    const workspaceId =
+      currentWorkspace?.id || "f4f5c567-a78f-40eb-941a-bfa7d243ebce";
 
     uploadFile(
       { file, workspaceId },
@@ -98,7 +129,8 @@ export default function ChatUI() {
         onError: (error) => {
           const errorMessage: Message = {
             id: (Date.now() + 1).toString(),
-            content: "Sorry, I couldn't process your request. Please try again.",
+            content:
+              "Sorry, I couldn't process your request. Please try again.",
             role: "assistant",
           };
           setMessages((prev) => [...prev, errorMessage]);
@@ -119,74 +151,73 @@ export default function ChatUI() {
       {/* Top Bar */}
       <TopBar />
 
-      {/* Main Content - Sidebar Layout */}
       <div className="flex-1 flex">
-        {/* Left Sidebar - Upload Section */}
+        {/* Left Side - File Upload */}
         <div className="w-80 bg-white border-r border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Upload Documents
-          </h3>
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Upload Documents
+            </h2>
 
-          {/* Upload Area */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-sm text-gray-600 mb-2">
-              Upload PDF, DOCX, or TXT files
-            </p>
-            <p className="text-xs text-gray-500 mb-4">
-              Maximum file size: 10MB
-            </p>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileInputChange}
-              accept=".pdf,.docx,.txt"
-              className="hidden"
-            />
-
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="w-full"
-            >
-              {isUploading ? "Uploading..." : "Choose File"}
-            </Button>
-          </div>
-
-          {/* Uploaded File Display */}
-          {uploadedFile && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-medium text-blue-800">
-                      {uploadedFile.name}
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={removeUploadedFile}
-                  className="text-blue-600 hover:text-blue-800"
+            {/* File Upload Area */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <Upload className="mx-auto h-12 w-12 text-gray-400" />
+              <div className="mt-4">
+                <label
+                  htmlFor="file-upload"
+                  className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  Choose File
+                </label>
+                <input
+                  ref={fileInputRef}
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.docx,.txt"
+                  onChange={handleFileInputChange}
+                  disabled={isUploading}
+                />
               </div>
+              <p className="mt-2 text-sm text-gray-500">
+                PDF, DOCX, or TXT files up to 10MB
+              </p>
             </div>
-          )}
 
-          {/* File List */}
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">
-              Recent Files
-            </h4>
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500">No recent files</p>
-            </div>
+            {/* Uploaded File Display */}
+            {uploadedFile && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-8 w-8 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-green-900">
+                        {uploadedFile.name}
+                      </p>
+                      <p className="text-xs text-green-600">
+                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={removeUploadedFile}
+                    className="text-green-600 hover:text-green-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Upload Status */}
+            {isUploading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-blue-700">Uploading...</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -227,34 +258,37 @@ export default function ChatUI() {
                       )}
                       <div className="flex-1">
                         <p className="text-sm">{message.content}</p>
-                        
-                        {/* Show AI references if available */}
-                        {message.role === "assistant" && message.references && message.references.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            <p className="text-xs text-gray-500 font-medium">
-                              References:
-                            </p>
-                            <div className="space-y-2 max-h-60 overflow-y-auto">
-                              {message.references.map((reference, index) => (
-                                <div
-                                  key={index}
-                                  className="p-3 bg-gray-50 rounded border text-xs"
-                                >
-                                  <p className="text-gray-700 mb-1">
-                                    {reference.content.length > 150
-                                      ? `${reference.content.substring(0, 150)}...`
-                                      : reference.content}
-                                  </p>
-                                  {reference.source && (
-                                    <p className="text-blue-600 font-medium">
-                                      Source: {reference.source}
+
+                        {/* Show AI references only if user specifically asks for them */}
+                        {message.role === "assistant" &&
+                          message.references &&
+                          message.references.length > 0 &&
+                          shouldShowReferences(message.content, messages) && (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-xs text-gray-500 font-medium">
+                                References:
+                              </p>
+                              <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {message.references.map((reference, index) => (
+                                  <div
+                                    key={index}
+                                    className="p-3 bg-gray-50 rounded border text-xs"
+                                  >
+                                    <p className="text-gray-700 mb-1">
+                                      {reference.content.length > 150
+                                        ? `${reference.content.substring(0, 150)}...`
+                                        : reference.content}
                                     </p>
-                                  )}
-                                </div>
-                              ))}
+                                    {reference.source && (
+                                      <p className="text-blue-600 font-medium">
+                                        Source: {reference.source}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     </div>
                   </div>
@@ -269,7 +303,9 @@ export default function ChatUI() {
                     <Bot className="h-5 w-5 text-blue-600" />
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm">AI is searching documents...</span>
+                      <span className="text-sm">
+                        AI is searching documents...
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -298,8 +334,10 @@ export default function ChatUI() {
               <Button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isChatting}
+                className="px-6"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4 mr-2" />
+                Send
               </Button>
             </div>
           </div>

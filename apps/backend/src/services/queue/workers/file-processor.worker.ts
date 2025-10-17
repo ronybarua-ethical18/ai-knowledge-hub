@@ -18,7 +18,10 @@ import { AiService } from 'src/services/ai/ai.service';
 export class FileProcessorWorker {
   private readonly logger = new Logger(FileProcessorWorker.name);
 
-  constructor(private readonly databaseService: DatabaseService, private readonly aiService: AiService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly aiService: AiService,
+  ) {}
 
   async processFileJob(job: Job): Promise<void> {
     this.logger.log(`Processing file job: ${job.id}`);
@@ -38,7 +41,7 @@ export class FileProcessorWorker {
       const loader = new PDFLoader(fileData.path);
       const docs = await loader.load();
 
-    await this.aiService.addDocumentsToVectorStore(docs);
+      await this.aiService.addDocumentsToVectorStore(docs);
       console.log('Documents added to vector store');
 
       // const textSplitter = new CharacterTextSplitter({

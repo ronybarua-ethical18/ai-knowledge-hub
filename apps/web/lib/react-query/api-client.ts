@@ -15,7 +15,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response interceptor for error handling
@@ -28,5 +28,5 @@ apiClient.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
