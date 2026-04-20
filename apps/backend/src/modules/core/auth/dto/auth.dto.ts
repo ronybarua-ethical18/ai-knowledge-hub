@@ -76,6 +76,7 @@ export class ResetPasswordDto {
 export class VerifyEmailDto {
   @ApiProperty()
   @IsString()
+  @MinLength(20, { message: 'Invalid verification token' })
   token: string;
 }
 

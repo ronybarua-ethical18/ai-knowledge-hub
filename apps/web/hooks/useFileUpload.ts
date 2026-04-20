@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "../lib/react-query/api-client";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/api-errors";
 
 export const useFileUpload = () => {
   return useMutation({
@@ -29,8 +30,8 @@ export const useFileUpload = () => {
       // Remove the toast from here - let the component handle it
       // toast.success(data.message);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Upload failed");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Upload failed"));
     },
   });
 };

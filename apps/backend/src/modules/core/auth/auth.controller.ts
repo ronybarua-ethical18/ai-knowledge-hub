@@ -125,10 +125,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Resend email verification' })
   @ApiResponse({ status: 200, description: 'Verification email sent' })
   async resendVerification(
-    @Body() _resendVerificationDto: ResendVerificationDto,
+    @Body() resendVerificationDto: ResendVerificationDto,
   ): Promise<void> {
-    // TODO: Implement resend verification logic
-    return;
+    return this.authService.resendVerification(resendVerificationDto);
   }
 
   @Post('forgot-password')

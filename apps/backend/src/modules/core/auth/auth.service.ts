@@ -137,11 +137,15 @@ export class AuthService {
       description: 'My personal workspace',
     });
 
-    // Send welcome email
-    await this.emailService.sendWelcomeEmail({
+    const verificationToken = await this.generateEmailVerificationToken({
+      id: user.id,
       email: user.email,
-      fullName: user.fullName,
+      role: user.role,
     });
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+    );
 
     const tokens = await this.generateTokens(user);
     const workspaces = await this.getUserWorkspaces(user.id);
@@ -179,21 +183,56 @@ export class AuthService {
   }
 
   async verifyEmail(token: string): Promise<User> {
+    let payload: { sub: string; type?: string };
     try {
-      const payload = this.jwtService.verify(token, {
+      payload = this.jwtService.verify<{
+        sub: string;
+        type?: string;
+      }>(token, {
         secret: env.config.JWT_SECRET,
       });
-
-      console.log(payload);
-
-      // if (payload.type !== 'email-verification') {
-      //   throw ApiError.badRequest('Invalid token type');
-      // }
-
-      return await this.userService.verifyEmail(payload.sub);
     } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      const err = error as { name?: string };
+      if (err.name === 'TokenExpiredError') {
+        throw ApiError.badRequest(
+          'This verification link has expired. You can request a new verification email.',
+        );
+      }
       throw ApiError.badRequest('Invalid verification token');
     }
+
+    if (payload.type !== 'email-verification') {
+      throw ApiError.badRequest('Invalid verification token');
+    }
+
+    const user = await this.userService.findById(payload.sub);
+    if (!user) {
+      throw ApiError.badRequest('Invalid verification token');
+    }
+
+    // Idempotent: safe for double-clicks, React Strict Mode, or expired tabs
+    if (user.isEmailVerified) {
+      return user;
+    }
+
+    return await this.userService.verifyEmail(user.id);
+  }
+
+  async resendVerification(dto: { email: string }): Promise<void> {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user || user.isEmailVerified) {
+      return;
+    }
+
+    const token = await this.generateEmailVerificationToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+    await this.emailService.sendVerificationEmail(user.email, token);
   }
 
   async forgotPassword(email: string): Promise<void> {
@@ -256,6 +295,25 @@ export class AuthService {
       user,
       ...tokens,
     };
+  }
+
+  private async generateEmailVerificationToken(user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  }): Promise<string> {
+    return this.jwtService.signAsync(
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        type: 'email-verification',
+      },
+      {
+        secret: env.config.JWT_SECRET,
+        expiresIn: '24h',
+      },
+    );
   }
 
   private async generateTokens(user: {

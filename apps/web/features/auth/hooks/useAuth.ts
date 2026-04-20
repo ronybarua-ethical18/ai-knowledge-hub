@@ -12,6 +12,7 @@ import {
   getStoredWorkspaces,
 } from "../services/auth";
 import { queryKeys } from "@/constants/queryKeys";
+import { getApiErrorMessage } from "@/lib/api-errors";
 
 export const useLogin = () => {
   const queryClient = useQueryClient();
@@ -25,8 +26,8 @@ export const useLogin = () => {
       toast.success("Login successful!");
       router.push("/");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Login failed");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Login failed"));
     },
   });
 };
@@ -43,8 +44,8 @@ export const useRegister = () => {
       toast.success("Registration successful!");
       router.push("/");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Registration failed");
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Registration failed"));
     },
   });
 };
@@ -60,8 +61,7 @@ export const useLogout = () => {
       toast.success("Logged out successfully!");
       router.push("/login");
     },
-    onError: (error: any) => {
-      console.error("Logout error:", error);
+    onError: () => {
       queryClient.clear();
       router.push("/login");
     },

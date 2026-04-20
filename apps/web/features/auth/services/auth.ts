@@ -55,11 +55,8 @@ export const login = async (
     const data = extractResponseData(response);
     storeAuthData(data);
     return data;
-  } catch (error: any) {
-    console.error(
-      "Login failed:",
-      error.response?.data?.message || error.message,
-    );
+  } catch (error: unknown) {
+    // Do not console.error(Error) here — Next.js dev overlay treats it like an uncaught crash.
     throw error;
   }
 };
@@ -72,8 +69,7 @@ export const register = async (
     const data = extractResponseData(response);
     storeAuthData(data);
     return data;
-  } catch (error: any) {
-    console.error("Register error:", error);
+  } catch (error: unknown) {
     throw error;
   }
 };
@@ -81,8 +77,8 @@ export const register = async (
 export const logout = async (): Promise<void> => {
   try {
     await apiClient.post("/auth/logout");
-  } catch (error) {
-    console.error("Logout error:", error);
+  } catch {
+    // ignore — credentials cleared in finally
   } finally {
     cookieUtils.clear();
   }
@@ -100,8 +96,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
     // Ensure we return a valid user object or null
     return userData || null;
-  } catch (error) {
-    console.error("Error fetching current user:", error);
+  } catch {
     return null;
   }
 };

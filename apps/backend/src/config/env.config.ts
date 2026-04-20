@@ -4,6 +4,8 @@ import { config } from 'dotenv';
 (config as () => void)();
 
 interface Config {
+  /** Public web app URL (no trailing slash). Used in email links. */
+  FRONTEND_URL: string;
   DATABASE_URL: string;
   DATABASE_POOL_SIZE: number;
   DATABASE_POOL_TIMEOUT: number;
@@ -38,6 +40,10 @@ function getEnvVar(key: string, defaultValue?: string): string {
 
 export const env = {
   config: {
+    FRONTEND_URL: getEnvVar('FRONTEND_URL', 'http://localhost:3000').replace(
+      /\/+$/,
+      '',
+    ),
     DATABASE_URL: getEnvVar('DATABASE_URL'),
     DATABASE_POOL_SIZE: Number(getEnvVar('DATABASE_POOL_SIZE', '10')),
     DATABASE_POOL_TIMEOUT: Number(getEnvVar('DATABASE_POOL_TIMEOUT', '10000')),

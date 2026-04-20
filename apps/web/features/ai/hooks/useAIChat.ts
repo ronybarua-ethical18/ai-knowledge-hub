@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { chatWithDocuments, ChatRequest, ChatResponse } from "../services/ai";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/api-errors";
 
 export const useAiChat = () => {
   const queryClient = useQueryClient();
@@ -10,9 +11,14 @@ export const useAiChat = () => {
     onSuccess: (data: ChatResponse) => {
       console.log("Chat successful:", data);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Chat error:", error);
-      toast.error("Failed to get AI response. Please try again.");
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Failed to get AI response. Please try again.",
+        ),
+      );
     },
   });
 };

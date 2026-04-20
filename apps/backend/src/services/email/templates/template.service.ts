@@ -1,13 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
+import { env } from '../../../config/env.config';
 
 @Injectable()
 export class EmailTemplateService {
-  constructor(private configService: ConfigService) {}
-
   private getTemplatePath(templateName: string): string {
     return path.join(
       process.cwd(),
@@ -41,21 +39,24 @@ export class EmailTemplateService {
   }
 
   async getWelcomeTemplate(fullName: string) {
+    const base = env.config.FRONTEND_URL;
     return this.compileTemplate('welcome', {
       fullName,
-      loginUrl: `${this.configService.get('FRONTEND_URL')}/login`,
+      loginUrl: `${base}/login`,
     });
   }
 
   async getVerificationTemplate(token: string) {
+    const base = env.config.FRONTEND_URL;
     return this.compileTemplate('verification', {
-      verificationUrl: `${this.configService.get('FRONTEND_URL')}/verify-email?token=${token}`,
+      verificationUrl: `${base}/verify-email?token=${token}`,
     });
   }
 
   async getPasswordResetTemplate(token: string) {
+    const base = env.config.FRONTEND_URL;
     return this.compileTemplate('password-reset', {
-      resetUrl: `${this.configService.get('FRONTEND_URL')}/reset-password?token=${token}`,
+      resetUrl: `${base}/reset-password?token=${token}`,
     });
   }
 }

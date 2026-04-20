@@ -23,7 +23,7 @@ export default function Signup({ onSubmit, onSignIn }: SignupProps) {
   const { register, isRegistering } = useAuthContext();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -39,12 +39,7 @@ export default function Signup({ onSubmit, onSignIn }: SignupProps) {
     if (onSubmit) {
       onSubmit({ fullName, email, password });
     } else {
-      try {
-        await register({ fullName, email, password });
-        router.push("/");
-      } catch (error) {
-        // Error handling is done in the hook
-      }
+      register({ fullName, email, password });
     }
   };
 

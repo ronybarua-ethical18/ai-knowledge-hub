@@ -6,6 +6,14 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+function shouldSkipUnauthorizedRedirect(errorUrl: string | undefined): boolean {
+  if (!errorUrl) return false;
+  // Failed login/register return 401 — redirecting would clear state and break the auth UI.
+  return (
+    errorUrl.includes("/auth/login") || errorUrl.includes("/auth/register")
+  );
+}
+
 // Request interceptor - optimized token extraction
 apiClient.interceptors.request.use(
   (config) => {
@@ -22,8 +30,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
+    const status = error.response?.status;
+    const url = error.config?.url ?? "";
+    if (
+      status === 401 &&
+      typeof window !== "undefined" &&
+      !shouldSkipUnauthorizedRedirect(url)
+    ) {
       cookieUtils.clear();
       window.location.href = "/login";
     }
