@@ -26,7 +26,11 @@ interface Config {
   REDIS_HOST: string;
   REDIS_PORT: number;
   QDRANT_URL: string;
+  /** Qdrant Cloud (or any secured cluster). Omit for local Docker without auth. */
+  QDRANT_API_KEY: string;
   GEMINI_API_KEY: string;
+  /** Must support embedContent on Google AI API (e.g. embedding-001). */
+  GEMINI_EMBEDDING_MODEL: string;
   GEMINI_CHAT_MODEL: string;
 }
 
@@ -66,7 +70,16 @@ export const env = {
     REDIS_HOST: getEnvVar('REDIS_HOST', 'localhost'),
     REDIS_PORT: Number(getEnvVar('REDIS_PORT', '6379')),
     QDRANT_URL: getEnvVar('QDRANT_URL', 'http://localhost:6333'),
+    QDRANT_API_KEY: getEnvVar('QDRANT_API_KEY', ''),
     GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY'),
-    GEMINI_CHAT_MODEL: getEnvVar('GEMINI_CHAT_MODEL', 'gemini-pro'),
+    GEMINI_EMBEDDING_MODEL: getEnvVar(
+      'GEMINI_EMBEDDING_MODEL',
+      'gemini-embedding-001',
+    ),
+    /**
+     * Chat model for Google AI Studio. Flash-Lite is the default for free-tier-friendly use
+     * (override if you use paid tier or want a stronger model).
+     */
+    GEMINI_CHAT_MODEL: getEnvVar('GEMINI_CHAT_MODEL', 'gemini-2.5-flash-lite'),
   } satisfies Config,
 };

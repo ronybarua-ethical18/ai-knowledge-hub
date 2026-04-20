@@ -62,6 +62,10 @@ export class FileUploadService {
       await fileQueue.add(
         'process-file',
         JSON.stringify({
+          fileId: fileRecord.id,
+          workspaceId,
+          userId,
+          mimeType: file.mimetype,
           filename: file.originalname,
           destination: file.destination,
           path: file.path,

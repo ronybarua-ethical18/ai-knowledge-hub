@@ -1,104 +1,102 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIEmbeddings } from '@langchain/openai';
-import { QdrantVectorStore } from '@langchain/qdrant';
 import { Document } from '@langchain/core/documents';
-import type { AttributeInfo } from 'langchain/chains/query_constructor';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
-import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
-import { TaskType } from '@google/generative-ai';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
 import { Job } from 'bullmq';
 import * as fs from 'fs/promises';
-import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
-import { DatabaseService } from '../../../database/database.service';
 import { AiService } from 'src/services/ai/ai.service';
+
+type FileJobPayload = {
+  path: string;
+  filename?: string;
+  fileId?: string;
+  workspaceId?: string;
+  userId?: string;
+  mimeType?: string;
+};
 
 @Injectable()
 export class FileProcessorWorker {
   private readonly logger = new Logger(FileProcessorWorker.name);
 
-  constructor(
-    private readonly databaseService: DatabaseService,
-    private readonly aiService: AiService,
-  ) {}
+  constructor(private readonly aiService: AiService) {}
 
   async processFileJob(job: Job): Promise<void> {
     this.logger.log(`Processing file job: ${job.id}`);
 
     try {
-      const fileData = JSON.parse(job.data);
+      const fileData = JSON.parse(job.data) as FileJobPayload;
 
-      /*
-      Path: data.path
-      read the pdf from path,
-      chunk the pdf,
-      call teh openai embedding model for every chunk,
-      store the chunk in qdrant db
-      */
+      if (!fileData.fileId || !fileData.workspaceId || !fileData.userId) {
+        this.logger.warn(
+          `Job ${job.id}: missing fileId, workspaceId, or userId — skipping RAG indexing. Re-upload the file after deploying the latest backend.`,
+        );
+        return;
+      }
 
-      //Load the pdf from path
-      const loader = new PDFLoader(fileData.path);
-      const docs = await loader.load();
+      const { fileId, workspaceId, userId } = fileData;
+      const sourceLabel = fileData.filename ?? fileId;
+      const mimeType = fileData.mimeType ?? 'application/pdf';
 
-      await this.aiService.addDocumentsToVectorStore(docs);
-      console.log('Documents added to vector store');
+      let docs: Document[];
 
-      // const textSplitter = new CharacterTextSplitter({
-      //   chunkSize: 100,
-      //   chunkOverlap: 0,
-      // });
-      // const texts = await textSplitter.splitText(docs);
-      // console.log(texts);
+      switch (mimeType) {
+        case 'application/pdf': {
+          const loader = new PDFLoader(fileData.path);
+          docs = await loader.load();
+          break;
+        }
+        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
+          const text = await this.extractTextFromDOCX(fileData.path);
+          docs = [
+            new Document({
+              pageContent: text,
+              metadata: { source: 'docx' },
+            }),
+          ];
+          break;
+        }
+        case 'text/plain': {
+          const text = await this.extractTextFromTXT(fileData.path);
+          docs = [
+            new Document({
+              pageContent: text,
+              metadata: { source: 'txt' },
+            }),
+          ];
+          break;
+        }
+        default:
+          throw new Error(`Unsupported mime type for indexing: ${mimeType}`);
+      }
 
-      // const { filename, destination, path } = fileData;
+      const splitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 1500,
+        chunkOverlap: 200,
+      });
 
-      // this.logger.log(`Processing file: ${filename} at ${path}`);
+      const docsWithMeta = docs.map(
+        (d) =>
+          new Document({
+            pageContent: d.pageContent,
+            metadata: {
+              ...d.metadata,
+              fileId,
+              workspaceId,
+              userId,
+              source: sourceLabel,
+            },
+          }),
+      );
 
-      // // Find the file record in database
-      // const fileRecord = await this.databaseService.file.findFirst({
-      //   where: { filePath: path },
-      // });
+      const chunks = await splitter.splitDocuments(docsWithMeta);
 
-      // if (!fileRecord) {
-      //   throw new Error(`File record not found for path: ${path}`);
-      // }
-
-      // // Update status to processing
-      // await this.databaseService.file.update({
-      //   where: { id: fileRecord.id },
-      //   data: { status: FileStatus.PROCESSING },
-      // });
-
-      // // Extract text based on file type
-      // let extractedText: string;
-      // const mimeType = fileRecord.mimeType;
-
-      // switch (mimeType) {
-      //   case 'application/pdf':
-      //     extractedText = await this.extractTextFromPDF(path);
-      //     break;
-      //   case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-      //     extractedText = await this.extractTextFromDOCX(path);
-      //     break;
-      //   case 'text/plain':
-      //     extractedText = await this.extractTextFromTXT(path);
-      //     break;
-      //   default:
-      //     throw new Error('Unsupported file type');
-      // }
-
-      // // Update file with extracted text
-      // await this.databaseService.file.update({
-      //   where: { id: fileRecord.id },
-      //   data: {
-      //     extractedText,
-      //     status: FileStatus.PROCESSED,
-      //     processedAt: new Date(),
-      //   },
-      // });
-
-      // this.logger.log(`File processed successfully: ${filename}`);
+      await this.aiService.addDocumentsToVectorStore(chunks);
+      this.logger.log(
+        `Indexed ${chunks.length} chunk(s) from ${docs.length} document part(s) (${mimeType}) for workspace ${workspaceId}`,
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
@@ -107,12 +105,6 @@ export class FileProcessorWorker {
       );
       throw error;
     }
-  }
-
-  private async extractTextFromPDF(filePath: string): Promise<string> {
-    const dataBuffer = await fs.readFile(filePath);
-    const data = await pdfParse(dataBuffer);
-    return data.text;
   }
 
   private async extractTextFromDOCX(filePath: string): Promise<string> {

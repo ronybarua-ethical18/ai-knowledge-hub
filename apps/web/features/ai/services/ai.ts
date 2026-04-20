@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/react-query/api-client";
 // Types
 export interface ChatRequest {
   message: string;
+  workspaceId: string;
   limit?: number;
 }
 

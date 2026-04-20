@@ -75,8 +75,11 @@ export default function ChatUI() {
       return;
     }
 
-    const workspaceId =
-      currentWorkspace?.id || "f4f5c567-a78f-40eb-941a-bfa7d243ebce";
+    if (!currentWorkspace?.id) {
+      toast.error("Select a workspace before uploading files.");
+      return;
+    }
+    const workspaceId = currentWorkspace.id;
 
     uploadFile(
       { file, workspaceId },
@@ -102,6 +105,10 @@ export default function ChatUI() {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
+    if (!currentWorkspace?.id) {
+      toast.error("Select a workspace before chatting.");
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -115,7 +122,11 @@ export default function ChatUI() {
 
     // Call AI chat API
     chatWithAI(
-      { message: currentMessage, limit: 5 },
+      {
+        message: currentMessage,
+        workspaceId: currentWorkspace.id,
+        limit: 5,
+      },
       {
         onSuccess: (data) => {
           const aiMessage: Message = {

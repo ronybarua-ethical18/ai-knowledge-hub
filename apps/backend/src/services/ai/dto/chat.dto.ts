@@ -1,10 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsUUID } from 'class-validator';
 
 export class ChatRequestDto {
   @ApiProperty()
   @IsString()
   message: string;
+
+  @ApiProperty({
+    description:
+      'Workspace whose uploaded documents should be searched (must match file uploads).',
+  })
+  @IsUUID()
+  workspaceId: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
