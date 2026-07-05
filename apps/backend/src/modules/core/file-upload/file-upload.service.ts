@@ -2,8 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service';
 import { FileType, FileStatus } from '@prisma/client';
 import * as fs from 'fs/promises';
-import * as pdfParse from 'pdf-parse';
-import * as mammoth from 'mammoth';
 import { ApiError } from '../../../common/exceptions/api-error.exception';
 import { QueueService } from '../../../services/queue/queue.service';
 
@@ -82,79 +80,6 @@ export class FileUploadService {
       this.logger.error(`Failed to upload file: ${errorMessage}`);
       throw ApiError.badRequest('Failed to upload file');
     }
-  }
-
-  private async processFile(
-    fileId: string,
-    filePath: string,
-    mimeType: string,
-  ): Promise<void> {
-    try {
-      this.logger.log(`Processing file: ${fileId}`);
-
-      // Update status to processing
-      await this.databaseService.file.update({
-        where: { id: fileId },
-        data: { status: FileStatus.PROCESSING },
-      });
-
-      // Extract text based on file type
-      let extractedText: string;
-
-      switch (mimeType) {
-        case 'application/pdf':
-          extractedText = await this.extractTextFromPDF(filePath);
-          break;
-        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-          extractedText = await this.extractTextFromDOCX(filePath);
-          break;
-        case 'text/plain':
-          extractedText = await this.extractTextFromTXT(filePath);
-          break;
-        default:
-          throw new Error('Unsupported file type');
-      }
-
-      // Update file with extracted text
-      await this.databaseService.file.update({
-        where: { id: fileId },
-        data: {
-          extractedText,
-          status: FileStatus.PROCESSED,
-          processedAt: new Date(),
-        },
-      });
-
-      this.logger.log(`File processed successfully: ${fileId}`);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error occurred';
-      this.logger.error(`Failed to process file ${fileId}: ${errorMessage}`);
-
-      // Update status to failed
-      await this.databaseService.file.update({
-        where: { id: fileId },
-        data: {
-          status: FileStatus.FAILED,
-          errorMessage,
-        },
-      });
-    }
-  }
-
-  private async extractTextFromPDF(filePath: string): Promise<string> {
-    const dataBuffer = await fs.readFile(filePath);
-    const data = await pdfParse(dataBuffer);
-    return data.text;
-  }
-
-  private async extractTextFromDOCX(filePath: string): Promise<string> {
-    const result = await mammoth.extractRawText({ path: filePath });
-    return result.value;
-  }
-
-  private async extractTextFromTXT(filePath: string): Promise<string> {
-    return await fs.readFile(filePath, 'utf-8');
   }
 
   async getUserFiles(userId: string, workspaceId?: string): Promise<any[]> {

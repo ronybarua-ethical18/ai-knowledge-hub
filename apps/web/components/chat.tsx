@@ -3,11 +3,12 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
-import { Upload, Send, FileText, X, Bot, User } from "lucide-react";
+import { Upload, Send, Bot, User } from "lucide-react";
 import toast from "react-hot-toast";
 import { useFileUpload } from "../hooks/useFileUpload";
 import { useAiChat } from "../features/ai/hooks/useAIChat";
 import TopBar from "./TopBar";
+import DocumentSidebar from "./DocumentSidebar";
 import { useAuthContext } from "../contexts/AuthContext";
 
 interface Message {
@@ -56,7 +57,6 @@ export default function ChatUI() {
   const { currentWorkspace } = useAuthContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (file: File) => {
@@ -84,9 +84,8 @@ export default function ChatUI() {
     uploadFile(
       { file, workspaceId },
       {
-        onSuccess: (data) => {
-          toast.success("File uploaded successfully!");
-          setUploadedFile(file);
+        onSuccess: () => {
+          toast.success("File uploaded! Processing in the background…");
         },
         onError: (error) => {
           toast.error("Failed to upload file");
@@ -100,6 +99,10 @@ export default function ChatUI() {
     const file = e.target.files?.[0];
     if (file) {
       handleFileUpload(file);
+    }
+    // Reset so re-selecting the same file still fires onChange.
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -150,13 +153,6 @@ export default function ChatUI() {
     );
   };
 
-  const removeUploadedFile = () => {
-    setUploadedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Top Bar */}
@@ -164,7 +160,7 @@ export default function ChatUI() {
 
       <div className="flex-1 flex">
         {/* Left Side - File Upload */}
-        <div className="w-80 bg-white border-r border-gray-200 p-6">
+        <div className="w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Upload Documents
@@ -195,31 +191,6 @@ export default function ChatUI() {
               </p>
             </div>
 
-            {/* Uploaded File Display */}
-            {uploadedFile && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-8 w-8 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium text-green-900">
-                        {uploadedFile.name}
-                      </p>
-                      <p className="text-xs text-green-600">
-                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={removeUploadedFile}
-                    className="text-green-600 hover:text-green-800"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Upload Status */}
             {isUploading && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -230,6 +201,9 @@ export default function ChatUI() {
               </div>
             )}
           </div>
+
+          {/* Live document list with processing status */}
+          <DocumentSidebar workspaceId={currentWorkspace?.id} />
         </div>
 
         {/* Right Side - Chat Area */}

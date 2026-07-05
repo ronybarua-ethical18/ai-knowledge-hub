@@ -10,6 +10,7 @@ import { ChatRequestDto, ChatResponseDto } from './dto/chat.dto';
 import { GeminiApiEmbeddings } from './gemini-api.embeddings';
 import { workspaceFilter } from './qdrant-chat.filters';
 import { ensureWorkspacePayloadIndex } from './qdrant-workspace-payload-index';
+import { ensureCollectionExists } from './qdrant-collection';
 
 /** Tried in order after GEMINI_CHAT_MODEL (404 / quota / etc.). Duplicates removed at runtime. */
 const GEMINI_CHAT_FALLBACK_MODELS = [
@@ -64,6 +65,12 @@ export class AiService {
         url: args.url,
         ...(args.apiKey ? { apiKey: args.apiKey } : {}),
       });
+      await ensureCollectionExists(
+        client,
+        args.collectionName,
+        this.embeddings,
+        this.logger,
+      );
       await ensureWorkspacePayloadIndex(
         client,
         args.collectionName,

@@ -1,9 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/react-query/api-client";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/api-errors";
+import { filesQueryKey } from "@/features/files/hooks/useFiles";
 
 export const useFileUpload = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({
       file,
@@ -26,9 +29,12 @@ export const useFileUpload = () => {
       );
       return response.data;
     },
-    onSuccess: (data) => {
-      // Remove the toast from here - let the component handle it
-      // toast.success(data.message);
+    onSuccess: (_data, variables) => {
+      // Surface the new file (status UPLOADED) in the sidebar right away;
+      // useFiles then polls until it reaches PROCESSED/FAILED.
+      queryClient.invalidateQueries({
+        queryKey: filesQueryKey(variables.workspaceId),
+      });
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error, "Upload failed"));
