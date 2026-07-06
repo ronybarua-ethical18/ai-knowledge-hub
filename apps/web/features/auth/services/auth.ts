@@ -91,8 +91,8 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
 
-    const { data } = await apiClient.get("/auth/me");
-    const userData = extractResponseData(data);
+    const response = await apiClient.get("/auth/me");
+    const userData = extractResponseData(response);
 
     // Ensure we return a valid user object or null
     return userData || null;

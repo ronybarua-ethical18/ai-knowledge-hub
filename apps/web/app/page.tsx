@@ -1,7 +1,7 @@
 "use client";
 
-import ChatUI from "../components/chat";
+import AppShell from "@/components/AppShell";
 
 export default function Page() {
-  return <ChatUI />;
+  return <AppShell />;
 }
