@@ -1,199 +1,119 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { SharedButton, SharedInput } from "ui-design";
+import Link from "next/link";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { useAuthContext } from "../contexts/AuthContext";
+import AuthShell, {
+  AuthField,
+  PasswordField,
+  AuthSubmit,
+} from "./auth/AuthShell";
 
-interface SignupProps {
-  onSubmit?: (data: any) => void;
-  onSignIn?: () => void;
-}
-
-export default function Signup({ onSubmit, onSignIn }: SignupProps) {
+export default function Signup() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { register, isRegistering } = useAuthContext();
-  const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match.");
       return;
     }
-
     if (!agreeToTerms) {
-      alert("Please agree to the terms and conditions");
+      setError("Please agree to the Terms & Privacy Policy to continue.");
       return;
     }
 
-    if (onSubmit) {
-      onSubmit({ fullName, email, password });
-    } else {
-      register({ fullName, email, password });
-    }
-  };
-
-  const handleSignIn = () => {
-    if (onSignIn) {
-      onSignIn();
-    } else {
-      router.push("/login");
-    }
+    setError(null);
+    register({ fullName, email, password });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      {/* Logo Section */}
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
-        <div className="flex items-center gap-3">
-          {/* Logo Circle with AI Icon */}
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-            <div className="text-white text-lg font-bold">AI</div>
-          </div>
-          {/* Brand Name */}
-          <div className="flex items-center">
-            <span className="text-2xl font-bold text-blue-900">
-              AI Knowledge
-            </span>
-            <span className="text-xl font-normal text-blue-600 ml-1">Hub</span>
-            <div className="w-8 h-0.5 bg-blue-900 ml-1"></div>
-          </div>
-        </div>
-      </div>
+    <AuthShell
+      title="Create your account"
+      subtitle="Set up your account to start uploading and asking."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <AuthField
+          label="Full name"
+          value={fullName}
+          onChange={setFullName}
+          placeholder="Jordan Rivera"
+          autoComplete="name"
+        />
 
-      {/* Main Card */}
-      <div className="w-full max-w-md mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign Up</h1>
-            <p className="text-gray-600">Create your account to get started</p>
-          </div>
+        <AuthField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="you@company.com"
+          autoComplete="email"
+        />
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Full Name Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
-              </label>
-              <SharedInput
-                type="text"
-                placeholder="Enter your full name"
-                value={fullName}
-                onChange={setFullName}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        <PasswordField
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+        />
 
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <SharedInput
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={setEmail}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        <PasswordField
+          label="Confirm password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          autoComplete="new-password"
+        />
 
-            {/* Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <SharedInput
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={setPassword}
-                  className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? "👁️" : "👁️‍🗨️"}
-                </button>
-              </div>
-            </div>
+        <label className="flex cursor-pointer items-start gap-2 text-[13.5px] text-gray-600 dark:text-gray-400">
+          <Checkbox
+            className="mt-0.5"
+            checked={agreeToTerms}
+            onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
+          />
+          <span>
+            I agree to the{" "}
+            <a
+              href="#"
+              className="font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Terms &amp; Privacy Policy
+            </a>
+          </span>
+        </label>
 
-            {/* Confirm Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <SharedInput
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={setConfirmPassword}
-                  className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
-                </button>
-              </div>
-            </div>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 px-3 py-2 text-[13px] font-medium text-red-600 dark:bg-red-500/10 dark:text-red-400"
+          >
+            {error}
+          </p>
+        )}
 
-            {/* Terms and Conditions */}
-            <div className="flex items-center">
-              <Checkbox
-                id="terms"
-                checked={agreeToTerms}
-                onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
-                className="mr-2"
-              />
-              <label htmlFor="terms" className="text-sm text-gray-700">
-                I agree to the{" "}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
-                  Terms and Conditions
-                </a>
-              </label>
-            </div>
-
-            {/* Sign Up Button */}
-            <SharedButton
-              title={isRegistering ? "Creating Account..." : "Sign Up"}
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50"
-              //   disabled={isRegistering}
-            />
-          </form>
-
-          {/* Sign In Link */}
-          <div className="text-center mt-6">
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <button
-                onClick={handleSignIn}
-                className="text-blue-600 hover:text-blue-500 font-medium"
-              >
-                Sign in
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+        <AuthSubmit loading={isRegistering}>
+          {isRegistering ? "Creating account…" : "Create account"}
+        </AuthSubmit>
+      </form>
+    </AuthShell>
   );
 }
