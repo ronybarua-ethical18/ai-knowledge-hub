@@ -156,6 +156,7 @@ model File {
   fileType      FileType
   status        FileStatus
   filePath      String
+  cloudinaryPublicId String?
   extractedText String?
   errorMessage  String?
   processedAt   DateTime?

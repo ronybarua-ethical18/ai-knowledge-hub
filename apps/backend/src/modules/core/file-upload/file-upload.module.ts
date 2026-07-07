@@ -1,9 +1,11 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { DatabaseModule } from '../../../database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { FileUploadController } from './file-upload-controller';
 import { FileUploadService } from './file-upload.service';
+import { CloudinaryStorageService } from './cloudinary-storage.service';
 import { QueueModule } from '../../../services/queue/queue.module';
 import { FileProcessorWorker } from '../../../services/queue/workers/file-processor.worker';
 import { QueueService } from '../../../services/queue/queue.service';
@@ -14,7 +16,9 @@ import { AiModule } from 'src/services/ai/ai.module';
     DatabaseModule,
     ConfigModule,
     MulterModule.register({
-      dest: './uploads',
+      // In-memory buffer, not local disk — the file is streamed straight
+      // to Cloudinary so uploads survive restarts/multi-instance deploys.
+      storage: memoryStorage(),
       limits: {
         fileSize: 10 * 1024 * 1024, // 10MB limit
       },
@@ -23,7 +27,7 @@ import { AiModule } from 'src/services/ai/ai.module';
     AiModule,
   ],
   controllers: [FileUploadController],
-  providers: [FileUploadService, FileProcessorWorker],
+  providers: [FileUploadService, FileProcessorWorker, CloudinaryStorageService],
   exports: [FileUploadService],
 })
 export class FileUploadModule implements OnModuleInit {

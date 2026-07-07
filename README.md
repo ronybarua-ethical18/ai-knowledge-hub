@@ -21,6 +21,7 @@ AI Knowledge Hub is a knowledge management platform powered by LLMs. Users uploa
 - **Vector Database:** Qdrant
 - **Queues & Caching:** BullMQ on Redis (Valkey-compatible)
 - **AI Layer:** Google Gemini (chat + embeddings) via LangChain
+- **File Storage:** Cloudinary (raw resource uploads — no local disk dependency)
 - **Auth:** JWT (access + refresh), Passport, bcrypt; email verification via Nodemailer + Handlebars
 - **Monorepo Tooling:** pnpm workspaces + Turborepo
 - **Language:** TypeScript
@@ -54,8 +55,8 @@ packages/
 ## Core RAG Flow
 
 ```
-Upload  → File record (PostgreSQL) → "file-ready" queue (BullMQ / Redis)
-        → FileProcessorWorker: extract text → chunk (1500 / 200 overlap)
+Upload  → Cloudinary (raw storage) → File record (PostgreSQL) → "file-ready" queue (BullMQ / Redis)
+        → FileProcessorWorker: download from Cloudinary → extract text → chunk (1500 / 200 overlap)
           → Gemini embeddings → Qdrant ("file-collection")
 Chat    → workspace-filtered similarity search → Gemini prompt
           (model fallback chain; offline extraction if all models fail)
@@ -69,6 +70,7 @@ Chat    → workspace-filtered similarity search → Gemini prompt
 - PostgreSQL
 - Redis (or Valkey) and Qdrant — provided via Docker Compose (see below)
 - A Google Gemini API key
+- A Cloudinary account (free tier works) for uploaded document storage
 
 ## Getting Started
 
@@ -106,6 +108,7 @@ Copy `apps/backend/.env.example` to `apps/backend/.env` and fill in the values:
 | `PORT`                                                                                        | Backend port (default: `8000`)                |
 | `GLOBAL_PREFIX`                                                                               | API route prefix (default: `api/v1/`)         |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | OAuth credentials                             |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`                      | Cloudinary credentials for document storage   |
 
 ### 4. Set up the database
 
