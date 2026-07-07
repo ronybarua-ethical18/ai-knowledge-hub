@@ -9,6 +9,7 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "predev": "docker compose -f apps/backend/docker-compose.yml up -d qdrant || DOCKER_CONTEXT=default docker compose -f apps/backend/docker-compose.yml up -d qdrant",
     "dev": "pnpm exec turbo run dev"
   },
   "lint-staged": {

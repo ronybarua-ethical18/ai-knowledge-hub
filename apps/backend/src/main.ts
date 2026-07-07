@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { CorsConfigService } from './config/cors.config';
 import { env } from './config/env.config';
@@ -16,6 +16,13 @@ async function bootstrap(): Promise<void> {
   const corsService = app.get(CorsConfigService);
   app.enableCors(corsService.getCorsOptions());
   app.setGlobalPrefix(env.config.GLOBAL_PREFIX);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());

@@ -100,12 +100,14 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(JwtAuthGuard)
   @LogoutSwagger()
   async logout(@CurrentUser() user: User): Promise<void> {
     return this.authService.logout(user.id);
   }
 
   @Get('me')
+  @UseGuards(JwtAuthGuard)
   @GetProfileSwagger()
   async getProfile(@CurrentUser() user: User): Promise<User> {
     return user;
@@ -159,6 +161,7 @@ export class AuthController {
   // ========================================
 
   @Post('workspaces')
+  @UseGuards(JwtAuthGuard)
   @CreateWorkspaceSwagger()
   async createWorkspace(
     @CurrentUser() user: User,
@@ -181,6 +184,7 @@ export class AuthController {
   }
 
   @Get('workspaces')
+  @UseGuards(JwtAuthGuard)
   @GetWorkspacesSwagger()
   async getUserWorkspaces(
     @CurrentUser() user: User,
@@ -193,6 +197,7 @@ export class AuthController {
   }
 
   @Get('workspaces/:workspaceId')
+  @UseGuards(JwtAuthGuard)
   @GetWorkspaceSwagger()
   async getWorkspace(
     @CurrentUser() user: User,
@@ -212,6 +217,7 @@ export class AuthController {
   }
 
   @Put('workspaces/:workspaceId')
+  @UseGuards(JwtAuthGuard)
   @UpdateWorkspaceSwagger()
   async updateWorkspace(
     @CurrentUser() user: User,
@@ -236,6 +242,7 @@ export class AuthController {
   }
 
   @Delete('workspaces/:workspaceId')
+  @UseGuards(JwtAuthGuard)
   @DeleteWorkspaceSwagger()
   async deleteWorkspace(
     @CurrentUser() user: User,
@@ -245,6 +252,7 @@ export class AuthController {
   }
 
   @Post('workspaces/:workspaceId/members')
+  @UseGuards(JwtAuthGuard)
   @InviteWorkspaceMemberSwagger()
   async inviteWorkspaceMember(
     @CurrentUser() user: User,
@@ -259,6 +267,7 @@ export class AuthController {
   }
 
   @Get('workspaces/:workspaceId/members')
+  @UseGuards(JwtAuthGuard)
   @GetWorkspaceMembersSwagger()
   async getWorkspaceMembers(
     @CurrentUser() user: User,
@@ -268,6 +277,7 @@ export class AuthController {
   }
 
   @Put('workspaces/:workspaceId/members/:memberId')
+  @UseGuards(JwtAuthGuard)
   @UpdateWorkspaceMemberSwagger()
   async updateWorkspaceMember(
     @CurrentUser() user: User,
@@ -284,6 +294,7 @@ export class AuthController {
   }
 
   @Delete('workspaces/:workspaceId/members/:memberId')
+  @UseGuards(JwtAuthGuard)
   @RemoveWorkspaceMemberSwagger()
   async removeWorkspaceMember(
     @CurrentUser() user: User,
