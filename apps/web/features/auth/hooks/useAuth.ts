@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   login,
   register,
@@ -69,15 +69,30 @@ export const useLogout = () => {
 };
 
 export const useCurrentUser = () => {
+  const queryClient = useQueryClient();
+
+  // Seed the cache from localStorage after mount only. Reading it as
+  // `initialData` above (evaluated during render) diverges from the SSR
+  // pass, which has no localStorage — that caused a hydration mismatch
+  // (server renders the logged-out/fallback UI, client instantly shows the
+  // cached user).
+  useEffect(() => {
+    const stored = getStoredUser();
+    if (
+      stored &&
+      queryClient.getQueryData([queryKeys.AUTH, "user"]) === undefined
+    ) {
+      queryClient.setQueryData([queryKeys.AUTH, "user"], stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return useQuery({
     queryKey: [queryKeys.AUTH, "user"],
     queryFn: getCurrentUser,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    initialData: getStoredUser(),
-    // Add this to handle null values
     enabled: !!getStoredToken(),
-    // Add this to handle null values
     placeholderData: null,
   });
 };
