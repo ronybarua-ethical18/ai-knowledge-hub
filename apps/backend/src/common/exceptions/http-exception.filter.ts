@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { env } from '../../config/env.config';
 
 interface ExceptionResponse {
   message: string | string[];
@@ -84,7 +85,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
             ? undefined
             : exceptionResponse.details,
       };
-    } else if (exception instanceof Error) {
+    } else if (
+      exception instanceof Error &&
+      env.config.NODE_ENV !== 'production'
+    ) {
+      // Only surface raw error details outside production — in production this
+      // can leak internals (e.g. Prisma query text, file paths) to the client.
       errorResponse.response.message = exception.message;
     }
 
