@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Epilogue } from "next/font/google";
 import "@workspace/ui/styles/globals.css";
 import { TanstackReactQueryProvider } from "./TanstackReactQueryProvider";
-import { Toaster } from "react-hot-toast";
+import ToasterClient from "../components/ToasterClient";
 import { AuthProvider } from "../contexts/AuthContext";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
@@ -48,7 +48,7 @@ export default function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </TanstackReactQueryProvider>
-        <Toaster />
+        <ToasterClient />
       </body>
     </html>
   );
