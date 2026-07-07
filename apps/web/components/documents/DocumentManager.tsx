@@ -164,27 +164,37 @@ export default function DocumentManager({
       <div className="flex-1 overflow-y-auto px-6 py-5">
         {/* Dropzone */}
         <div
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
-            setDragging(true);
+            if (!isUploading) setDragging(true);
           }}
           onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          className={`cursor-pointer rounded-xl border border-dashed p-6 text-center transition-colors ${
-            dragging
-              ? "border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-500/10"
-              : "border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/5"
+          onDrop={isUploading ? undefined : onDrop}
+          aria-disabled={isUploading}
+          className={`rounded-xl border border-dashed p-6 text-center transition-colors ${
+            isUploading
+              ? "cursor-not-allowed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
+              : "cursor-pointer " +
+                (dragging
+                  ? "border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-500/10"
+                  : "border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/5")
           }`}
         >
           <div className="mx-auto mb-2.5 grid h-11 w-11 place-items-center rounded-xl border border-gray-200 bg-white text-indigo-600 dark:border-gray-700 dark:bg-gray-800 dark:text-indigo-300">
-            <Upload className="h-5 w-5" />
+            {isUploading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Upload className="h-5 w-5" />
+            )}
           </div>
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            Drag &amp; drop or click to upload
+            {isUploading ? "Uploading…" : "Drag & drop or click to upload"}
           </p>
           <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-            PDF, DOCX or TXT · up to 10 MB · indexed automatically
+            {isUploading
+              ? "Hang tight, this won't take long"
+              : "PDF, DOCX or TXT · up to 10 MB · indexed automatically"}
           </p>
         </div>
 

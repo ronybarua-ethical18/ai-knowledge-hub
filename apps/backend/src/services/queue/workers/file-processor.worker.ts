@@ -4,14 +4,14 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
 import { Job } from 'bullmq';
-import * as fs from 'fs/promises';
 import * as mammoth from 'mammoth';
 import { AiService } from 'src/services/ai/ai.service';
 import { DatabaseService } from '../../../database/database.service';
 import { FileStatus } from '@prisma/client';
 
 type FileJobPayload = {
-  path: string;
+  /** Cloudinary secure_url the file was uploaded to. */
+  url: string;
   filename?: string;
   fileId?: string;
   workspaceId?: string;
@@ -48,16 +48,19 @@ export class FileProcessorWorker {
     await this.updateStatus(fileId, FileStatus.PROCESSING);
 
     try {
+      const buffer = await this.downloadFile(fileData.url);
       let docs: Document[];
 
       switch (mimeType) {
         case 'application/pdf': {
-          const loader = new PDFLoader(fileData.path);
+          const loader = new PDFLoader(
+            new Blob([buffer], { type: 'application/pdf' }),
+          );
           docs = await loader.load();
           break;
         }
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
-          const text = await this.extractTextFromDOCX(fileData.path);
+          const text = await this.extractTextFromDOCX(buffer);
           docs = [
             new Document({
               pageContent: text,
@@ -67,7 +70,7 @@ export class FileProcessorWorker {
           break;
         }
         case 'text/plain': {
-          const text = await this.extractTextFromTXT(fileData.path);
+          const text = buffer.toString('utf-8');
           docs = [
             new Document({
               pageContent: text,
@@ -159,12 +162,18 @@ export class FileProcessorWorker {
     }
   }
 
-  private async extractTextFromDOCX(filePath: string): Promise<string> {
-    const result = await mammoth.extractRawText({ path: filePath });
-    return result.value;
+  private async downloadFile(url: string): Promise<Buffer> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download file from storage: ${response.status} ${response.statusText}`,
+      );
+    }
+    return Buffer.from(await response.arrayBuffer());
   }
 
-  private async extractTextFromTXT(filePath: string): Promise<string> {
-    return await fs.readFile(filePath, 'utf-8');
+  private async extractTextFromDOCX(buffer: Buffer): Promise<string> {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
   }
 }

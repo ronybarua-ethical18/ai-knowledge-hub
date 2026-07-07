@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../../database/database.service';
 import { FileType, FileStatus } from '@prisma/client';
-import * as fs from 'fs/promises';
 import { ApiError } from '../../../common/exceptions/api-error.exception';
 import { QueueService } from '../../../services/queue/queue.service';
+import { CloudinaryStorageService } from './cloudinary-storage.service';
 
 @Injectable()
 export class FileUploadService {
@@ -18,6 +18,7 @@ export class FileUploadService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly queueService: QueueService,
+    private readonly cloudinaryStorage: CloudinaryStorageService,
   ) {}
 
   async uploadFile(
@@ -40,6 +41,11 @@ export class FileUploadService {
     }
 
     try {
+      const uploaded = await this.cloudinaryStorage.uploadBuffer(
+        file.buffer,
+        file.originalname,
+      );
+
       // Create file record in database
       const fileRecord = await this.databaseService.file.create({
         data: {
@@ -51,7 +57,8 @@ export class FileUploadService {
           status: FileStatus.UPLOADED,
           userId,
           workspaceId,
-          filePath: file.path,
+          filePath: uploaded.url,
+          cloudinaryPublicId: uploaded.publicId,
         },
       });
 
@@ -65,8 +72,7 @@ export class FileUploadService {
           userId,
           mimeType: file.mimetype,
           filename: file.originalname,
-          destination: file.destination,
-          path: file.path,
+          url: uploaded.url,
         }),
       );
 
@@ -118,13 +124,15 @@ export class FileUploadService {
   async deleteFile(fileId: string, userId: string): Promise<void> {
     const file = await this.getFileById(fileId, userId);
 
-    // Delete physical file
-    try {
-      await fs.unlink(file.filePath);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error occurred';
-      this.logger.warn(`Failed to delete physical file: ${errorMessage}`);
+    // Delete from Cloudinary
+    if (file.cloudinaryPublicId) {
+      try {
+        await this.cloudinaryStorage.deleteByPublicId(file.cloudinaryPublicId);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error occurred';
+        this.logger.warn(`Failed to delete Cloudinary object: ${errorMessage}`);
+      }
     }
 
     // Delete database record

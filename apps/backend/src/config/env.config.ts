@@ -32,6 +32,9 @@ interface Config {
   /** Must support embedContent on Google AI API (e.g. embedding-001). */
   GEMINI_EMBEDDING_MODEL: string;
   GEMINI_CHAT_MODEL: string;
+  CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_API_KEY: string;
+  CLOUDINARY_API_SECRET: string;
 }
 
 function getEnvVar(key: string, defaultValue?: string): string {
@@ -81,5 +84,8 @@ export const env = {
      * (override if you use paid tier or want a stronger model).
      */
     GEMINI_CHAT_MODEL: getEnvVar('GEMINI_CHAT_MODEL', 'gemini-2.5-flash-lite'),
+    CLOUDINARY_CLOUD_NAME: getEnvVar('CLOUDINARY_CLOUD_NAME'),
+    CLOUDINARY_API_KEY: getEnvVar('CLOUDINARY_API_KEY'),
+    CLOUDINARY_API_SECRET: getEnvVar('CLOUDINARY_API_SECRET'),
   } satisfies Config,
 };
