@@ -108,7 +108,7 @@ export const useAuth = () => {
 
   return useMemo(
     () => ({
-      user,
+      user: user ?? null,
       isLoading,
       error,
       isAuthenticated: !!user,
