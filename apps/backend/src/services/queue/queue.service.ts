@@ -55,6 +55,14 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     return {
       host: env.config.REDIS_HOST,
       port: env.config.REDIS_PORT,
+
+      username: env.config.REDIS_USERNAME,
+      password: env.config.REDIS_PASSWORD,
+
+      tls: {},
+
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
     };
   }
 

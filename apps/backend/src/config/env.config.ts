@@ -25,6 +25,8 @@ interface Config {
   NODE_ENV: string;
   REDIS_HOST: string;
   REDIS_PORT: number;
+  REDIS_USERNAME: string;
+  REDIS_PASSWORD: string;
   QDRANT_URL: string;
   /** Qdrant Cloud (or any secured cluster). Omit for local Docker without auth. */
   QDRANT_API_KEY: string;
@@ -72,6 +74,8 @@ export const env = {
     NODE_ENV: getEnvVar('NODE_ENV', 'development'),
     REDIS_HOST: getEnvVar('REDIS_HOST', 'localhost'),
     REDIS_PORT: Number(getEnvVar('REDIS_PORT', '6379')),
+    REDIS_USERNAME: getEnvVar('REDIS_USERNAME', 'default'),
+    REDIS_PASSWORD: getEnvVar('REDIS_PASSWORD', ''),
     QDRANT_URL: getEnvVar('QDRANT_URL', 'http://localhost:6333'),
     QDRANT_API_KEY: getEnvVar('QDRANT_API_KEY', ''),
     GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY'),
