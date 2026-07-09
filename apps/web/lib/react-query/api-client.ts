@@ -2,7 +2,7 @@ import axios from "axios";
 import { cookieUtils } from "@/lib/utils/cookies";
 
 export const apiClient = axios.create({
-  baseURL: "http://localhost:8000/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1",
   withCredentials: true,
 });
 

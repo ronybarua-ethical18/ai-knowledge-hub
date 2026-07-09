@@ -15,7 +15,7 @@ async function bootstrap(): Promise<void> {
 
   const corsService = app.get(CorsConfigService);
   app.enableCors(corsService.getCorsOptions());
-  app.setGlobalPrefix(env.config.GLOBAL_PREFIX);
+  app.setGlobalPrefix(env.config.GLOBAL_PREFIX, { exclude: ['/'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
