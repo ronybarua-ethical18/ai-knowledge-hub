@@ -116,7 +116,17 @@ Copy `apps/backend/.env.example` to `apps/backend/.env` and fill in the values:
 cd apps/backend
 pnpm db:generate      # generate Prisma client
 pnpm db:migrate       # apply migrations
+pnpm db:seed          # (optional) create demo accounts
 ```
+
+`pnpm db:seed` creates these demo accounts (see `apps/backend/prisma/seed.ts`), all with password `password123`:
+
+| Email                      | Role                                       |
+| -------------------------- | ------------------------------------------ |
+| `premium@knowledgehub.com` | Premium user (owns "Demo Workspace")       |
+| `user@knowledgehub.com`    | Standard user (member of "Demo Workspace") |
+
+These are for local development only — never seed or use these credentials in a deployed environment.
 
 ### 5. Run the apps
 
