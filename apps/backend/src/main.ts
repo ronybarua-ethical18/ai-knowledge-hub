@@ -27,7 +27,9 @@ async function bootstrap(): Promise<void> {
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  await app.listen(env.config.PORT);
+  const port = Number(process.env.PORT) || env.config.PORT || 8000;
+
+  await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
   logger.log(`Application is running on: http://localhost:${env.config.PORT}`);
