@@ -1,6 +1,6 @@
 {
-  "name": "ai-powered-job-board",
-  "description": "A job board powered by AI, built with Next.js, shadcn/ui, and Tailwind CSS with TypeScript. Backend powered by NestJS.",
+  "name": "ai-knowledge-hub",
+  "description": "AI Knowledge Hub is a knowledge management platform powered by LLMs. Users upload documents into workspaces, which are indexed into a vector database, and then ask questions and get context-aware, cited answers via Retrieval-Augmented Generation (RAG). Frontend built with Next.js, shadcn/ui, and Tailwind CSS with TypeScript. Backend powered by NestJS.",
   "author": "Rony Barua",
   "version": "0.0.1",
   "private": true,
@@ -10,7 +10,9 @@
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "predev": "docker compose -f apps/backend/docker-compose.yml up -d qdrant valkey || DOCKER_CONTEXT=default docker compose -f apps/backend/docker-compose.yml up -d qdrant valkey",
-    "dev": "pnpm exec turbo run dev"
+    "dev": "pnpm exec turbo run dev",
+    "build": "pnpm exec turbo run build",
+    "check-types": "pnpm exec turbo run check-types"
   },
   "lint-staged": {
     "**/*.{js,ts,jsx,tsx}": [
@@ -20,7 +22,10 @@
   "workspaces": [
     "apps/web",
     "apps/backend",
-    "packages/ui-design"
+    "packages/ui",
+    "packages/ui-design",
+    "packages/eslint-config",
+    "packages/typescript-config"
   ],
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",
