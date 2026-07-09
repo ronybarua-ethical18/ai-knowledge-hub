@@ -29,7 +29,12 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(process.env.PORT) || env.config.PORT || 8000;
 
+  console.log('PORT =', port);
+  console.log('Before listen');
+
   await app.listen(port, '0.0.0.0');
+
+  console.log('After listen');
 
   const logger = new Logger('Bootstrap');
   logger.log(`Application is running on: http://localhost:${env.config.PORT}`);
